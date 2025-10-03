@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Form Surat Perintah Kerja (SPK) - Alfamart</title>
+    <script>
+        // Security Check
+        const isAuthenticated = sessionStorage.getItem('authenticated');
+        const userRole = sessionStorage.getItem('userRole');
+        const allowedRoles = ['BRANCH BUILDING & MAINTENANCE MANAGER'];
+
+        if (!isAuthenticated) {
+            // Jika belum login, simpan tujuan & alihkan ke halaman login
+            sessionStorage.setItem('redirectTo', window.location.pathname);
+            window.location.href = '/login.html';
+        } else if (!allowedRoles.includes(userRole)) {
+            // Jika sudah login tapi jabatan salah, beri peringatan & alihkan ke homepage
+            alert('Anda tidak memiliki izin untuk mengakses halaman ini.');
+            window.location.href = '/';
+        }
+    </script>
+    <link rel="stylesheet" href="../Estimasi_rab/style.css">
+    <link rel="icon" href="/Assets/favicon.ico" type="image/x-icon">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <a href="/">
+            <img src="../Assets/Alfamart-Emblem.png" alt="Alfamart Logo" class="header-logo" />
+        </a>
+        <h1>Form Surat Perintah Kerja (SPK)</h1>
+        <button id="logout-button-form" class="btn-logout-form">Logout</button>
+    </header>
+
+    <div class="container">
+        <form id="spk-form" class="form-container">
+            <label for="nomor_ulok">Nomor Ulok (Pilih RAB yang sudah disetujui):</label>
+            <select name="Nomor Ulok" id="nomor_ulok" required>
+                <option value="">-- Memuat data RAB... --</option>
+            </select>
+
+            <div id="rab-details" style="display:none; margin-top: 1rem; padding: 1rem; background-color: #f4f7f6; border-radius: 8px;">
+                <p><strong>Proyek:</strong> <span id="detail_proyek"></span></p>
+                <p><strong>Lingkup Pekerjaan:</strong> <span id="detail_lingkup"></span></p>
+                <p><strong>Grand Total:</strong> <span id="detail_total"></span></p>
+            </div>
+
+            <label for="cabang">Cabang:</label>
+            <select name="Cabang" id="cabang" required>
+                <option value="">-- Cabang Terisi Otomatis --</option>
+            </select>
+
+            <label for="nama_kontraktor">Nama Kontraktor:</label>
+            <select name="Nama Kontraktor" id="nama_kontraktor" required>
+                <option value="">-- Pilih RAB terlebih dahulu --</option>
+            </select>
+
+            <label for="nomor_spk">Nomor SPK:</label>
+            <div id="nomor-spk-container" style="display: flex; align-items: center; gap: 5px; flex-wrap: wrap;">
+                <span id="spk_auto_number" style="font-weight: bold; padding: 0.8rem 0; white-space: nowrap;">(Otomatis) /PROPNDEV-</span>
+                <span id="spk_kode_cabang" style="font-weight: bold; padding: 0.8rem 0;">(Cabang)</span>
+                <span style="padding: 0.8rem 0;">/</span>
+                <input type="text" id="spk_manual_1" name="spk_manual_1" placeholder="Bulan (Romawi)" required style="text-align: center; flex: 1; min-width: 120px;" maxlength="3">
+                <span style="padding: 0.8rem 0;">/</span>
+                <input type="text" id="spk_manual_2" name="spk_manual_2" placeholder="Tahun" required style="text-align: center; flex: 1; min-width: 80px;" maxlength="2">
+            </div>
+            <input type="hidden" id="nomor_spk_full" name="Nomor SPK">
+
+            <label for="par">PAR:</label>
+            <div id="par-container" style="display: flex; align-items: center; gap: 5px; flex-wrap: wrap;">
+                <input type="text" id="par_manual_1" name="par_manual_1" placeholder="xxxx" maxlength="4" required style="flex: 1; min-width: 80px;">
+                <span style="padding: 0.8rem 0; white-space: nowrap;">/PROPNDEV-</span>
+                <span id="par_kode_cabang" style="font-weight: bold; padding: 0.8rem 0;">(Cabang)</span>
+                <span style="padding: 0.8rem 0;">-</span>
+                <input type="text" id="par_manual_2" name="par_manual_2" placeholder="xxxx" required style="flex: 1; min-width: 80px;">
+                <span style="padding: 0.8rem 0;">-</span>
+                <input type="text" id="par_manual_3" name="par_manual_3" placeholder="xxxx" required style="flex: 1; min-width: 80px;">
+            </div>
+            <input type="hidden" id="par_full" name="PAR">
+
+            <label for="waktu_mulai">Tanggal Mulai Pelaksanaan:</label>
+            <input type="date" id="waktu_mulai" name="Waktu Mulai" required />
+
+            <label for="durasi">Durasi Pelaksanaan:</label>
+            <select name="Durasi" id="durasi" required>
+                <option value="">-- Pilih Durasi --</option>
+                <option value="10">10 Hari Kalender</option>
+                <option value="14">14 Hari Kalender</option>
+                <option value="20">20 Hari Kalender</option>
+                <option value="30">30 Hari Kalender</option>
+                <option value="35">35 Hari Kalender</option>
+                <option value="40">40 Hari Kalender</option>
+                <option value="48">48 Hari Kalender</option>
+            </select>
+
+            <div class="button-group">
+                <button type="submit" id="submit-button">Kirim untuk Persetujuan</button>
+            </div>
+        </form>
+
+        <a href="/" class="back-btn">← Kembali ke Beranda</a>
+    </div>
+
+    <div id="message" role="status" aria-live="polite"></div>
+
+    <script src="script.js"></script>
+    <script>
+        document.getElementById('logout-button-form').addEventListener('click', () => {
+            sessionStorage.clear();
+            window.location.href = '/'; // Arahkan ke homepage
+        });
+    </script>
+</body>
+</html>

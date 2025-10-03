@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Homepage - Aplikasi RAB</title>
+    <link rel="stylesheet" href="/Homepage/style.css" />
+    <link rel="icon" href="/Assets/favicon.ico" type="image/x-icon" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <header class="main-header">
+      <img
+        src="/Assets/Alfamart-Emblem.png"
+        alt="Alfamart Logo"
+        class="header-logo"
+      />
+      <h1>Building & Maintenance</h1>
+    </header>
+
+    <main class="container">
+      <div class="welcome-message">
+        <h2>Sistem Rencana Anggaran Biaya</h2>
+        <p>Silakan pilih menu di bawah untuk memulai.</p>
+      </div>
+
+      <nav class="menu-container">
+        <a href="/Estimasi_rab/" class="menu-item" id="menu-rab">
+          <h3>Estimasi RAB</h3>
+          <p>Buat atau revisi Rencana Anggaran Biaya.</p>
+        </a>
+        <a href="/SPK_form/" class="menu-item" id="menu-spk">
+          <h3>Buat SPK</h3>
+          <p>Buat Surat Perintah Kerja untuk kontraktor.</p>
+        </a>
+        <a
+          href="https://frontend-form-virid.vercel.app/login.html"
+          class="menu-item"
+        >
+          <h3>Pengawasan</h3>
+          <p>Input informasi pengawasan.</p>
+        </a>
+        <a href="https://opnamebnm.vercel.app/" class="menu-item">
+          <h3>Opname</h3>
+          <p>Pengisian form Opname.</p>
+        </a>
+        <a href="https://form-foto-dokumentasi.vercel.app/" class="menu-item">
+          <h3>Foto Dokumentasi Bangunan Toko Baru</h3>
+          <p>Pengisian form Dokumentasi.</p>
+        </a>
+      </nav>
+      <div class="logout-container" id="auth-container"></div>
+    </main>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const isAuthenticated = sessionStorage.getItem("authenticated");
+        const authContainer = document.getElementById("auth-container");
+
+        if (isAuthenticated) {
+          // Jika pengguna sudah login, tampilkan tombol Logout
+          authContainer.innerHTML =
+            '<button id="logout-button" class="btn-logout">Logout</button>';
+          document
+            .getElementById("logout-button")
+            .addEventListener("click", () => {
+              sessionStorage.clear();
+              window.location.reload();
+            });
+        } else {
+          // Jika pengguna belum login, tampilkan tombol Login
+          authContainer.innerHTML =
+            '<a href="/login.html" class="btn-login">Login</a>';
+        }
+      });
+    </script>
+  </body>
+</html>
+

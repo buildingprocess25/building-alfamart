@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
         "BATAM": "2DZ1", "MADIUN": "2MZ1"
     };
     
-    const PYTHON_API_BASE_URL = "https://alfamart.onrender.com";
+    const PYTHON_API_BASE_URL = "https://building-alfamart.onrender.com";
     let approvedRabData = [];
 
     const branchGroups = {

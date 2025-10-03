@@ -3,7 +3,7 @@
 // ▼▼▼ URL UNTUK MENCATAT UPAYA LOGIN (OPSIONAL) ▼▼▼
 const APPS_SCRIPT_POST_URL = "https://script.google.com/macros/s/AKfycbzPubDTa7E2gT5HeVLv9edAcn1xaTiT3J4BtAVYqaqiFAvFtp1qovTXpqpm-VuNOxQJ/exec"; 
 // ▼▼▼ URL BARU UNTUK VALIDASI LOGIN KE BACKEND PYTHON ANDA ▼▼▼
-const PYTHON_API_LOGIN_URL = "https://alfamart.onrender.com/api/login"; 
+const PYTHON_API_LOGIN_URL = "https://building-alfamart.onrender.com/api/login"; 
 
 /**
  * Mengirim data percobaan login ke Google Apps Script (untuk logging).

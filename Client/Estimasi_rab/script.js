@@ -14,7 +14,7 @@ let approvedStoreCodes = [];
 let rejectedSubmissionsList = [];
 let originalFormData = null;
 
-const PYTHON_API_BASE_URL = "https://alfamart.onrender.com";
+const PYTHON_API_BASE_URL = "https://building-alfamart.onrender.com";
 
 const sipilCategoryOrder = [
     "PEKERJAAN PERSIAPAN", 

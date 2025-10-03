@@ -25,7 +25,7 @@ CORS(app,
      origins=[
          "http://127.0.0.1:5500",
          "http://localhost:5500",
-         "https://alfamart-one.vercel.app"
+         "https://https://building-alfamart.vercel.app"
      ],
      methods=["GET", "POST", "OPTIONS", "PUT", "PATCH", "DELETE"],
      allow_headers=["Content-Type", "Authorization"],
@@ -146,7 +146,7 @@ def submit_rab():
         if not coordinator_emails:
             raise Exception(f"Tidak ada email Koordinator yang ditemukan untuk cabang '{cabang}'.")
 
-        base_url = "https://alfamart.onrender.com"
+        base_url = "https://building-alfamart.onrender.com"
         approver_for_link = coordinator_emails[0]
         approval_url = f"{base_url}/api/handle_rab_approval?action=approve&row={new_row_index}&level=coordinator&approver={approver_for_link}"
         rejection_url = f"{base_url}/api/handle_rab_approval?action=reject&row={new_row_index}&level=coordinator&approver={approver_for_link}"
@@ -233,11 +233,11 @@ def handle_rab_approval():
             if manager_email:
                 row_data[config.COLUMN_NAMES.KOORDINATOR_APPROVER] = approver
                 row_data[config.COLUMN_NAMES.KOORDINATOR_APPROVAL_TIME] = current_time
-                base_url = "https://alfamart.onrender.com"
+                base_url = "https://building-alfamart.onrender.com"
                 approval_url_manager = f"{base_url}/api/handle_rab_approval?action=approve&row={row}&level=manager&approver={manager_email}"
                 rejection_url_manager = f"{base_url}/api/handle_rab_approval?action=reject&row={row}&level=manager&approver={manager_email}"
                 link_pic = ("Silakan buat SPK melalui link berikut: "
-                            "<a href='https://alfamart-one.vercel.app/login.html' "
+                            "<a href='https://https://building-alfamart.vercel.app/login.html' "
                             "target='_blank' rel='noopener noreferrer'>Buat SPK</a>")
                 email_html_manager = render_template('email_template.html', level='Manajer', form_data=row_data, approval_url=approval_url_manager, rejection_url=rejection_url_manager, additional_info=f"Telah disetujui oleh Koordinator: {approver}<br><br>{link_pic}")
                 pdf_bytes = create_pdf_from_data(google_provider, row_data)
@@ -385,7 +385,7 @@ def submit_spk():
         if not branch_manager_email:
             raise Exception(f"Branch Manager email for branch '{cabang}' not found.")
 
-        base_url = "https://alfamart.onrender.com"
+        base_url = "https://building-alfamart.onrender.com"
         approval_url = f"{base_url}/api/handle_spk_approval?action=approve&row={new_row_index}&approver={branch_manager_email}"
         rejection_url = f"{base_url}/api/handle_spk_approval?action=reject&row={new_row_index}&approver={branch_manager_email}"
 
@@ -627,7 +627,7 @@ def submit_pengawasan():
                 "message": "Tidak ada penerima email yang valid. Pastikan PIC Building Support dipilih dan/atau Koordinator/Manajer terdaftar untuk cabang ini."
             }), 400
 
-        base_url = "https://alfamart-one.vercel.app" 
+        base_url = "https://https://building-alfamart.vercel.app" 
         next_form_path = FORM_LINKS.get(form_type, {}).get(data.get('kategori_lokasi'), '#')
         
         next_url_with_redirect = f"{base_url.strip('/')}/?redirectTo={next_form_path}" if next_form_path != '#' else None

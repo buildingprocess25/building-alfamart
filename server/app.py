@@ -272,10 +272,10 @@ def handle_rab_approval():
             google_provider.copy_to_approved_sheet(row_data)
 
             if creator_email:
-                support_emails = google_provider.get_emails_by_jabatan(cabang, config.JABATAN.SUPPORT)
+                kontraktor_emails = google_provider.get_emails_by_jabatan(cabang, config.JABATAN.KONTRAKTOR)
                 coordinator_emails = google_provider.get_emails_by_jabatan(cabang, config.JABATAN.KOORDINATOR)
                 manager_email = approver
-                cc_set = set(filter(None, support_emails + coordinator_emails))
+                cc_set = set(filter(None, kontraktor_emails + coordinator_emails))
                 cc_set.add(manager_email)
                 
                 cc_list = list(cc_set)

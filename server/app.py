@@ -448,15 +448,36 @@ def handle_spk_approval():
             row_data['Status'] = new_status
             row_data['Disetujui Oleh'] = approver
             row_data['Waktu Persetujuan'] = current_time
+
+
             final_pdf_bytes = create_spk_pdf(google_provider, row_data)
             final_pdf_filename = f"SPK_DISETUJUI_{row_data.get('Proyek')}_{row_data.get('Nomor Ulok')}.pdf"
             final_pdf_link = google_provider.upload_file_to_drive(final_pdf_bytes, final_pdf_filename, 'application/pdf', config.PDF_STORAGE_FOLDER_ID)
             google_provider.update_cell_by_sheet(spk_sheet, row_index, 'Link PDF', final_pdf_link)
+
+            email_penerima = set()
+
+            pembuat_spk_email = row_data.get('Dibuat Oleh')
+            if pembuat_spk_email:
+                email_penerima.add(pembuat_spk_email.strip())
+
+            penyetuju_spk_email = approver
+            if penyetuju_spk_email:
+                email_penerima.add(penyetuju_spk_email.strip())
+
+            nomor_ulok_spk = row_data.get('Nomor Ulok')
+
+            if nomor_ulok_spk:
+                pembuat_rab_email = google_provider.get_rab_creator_by_ulok(nomor_ulok_spk)
+                if pembuat_rab_email:
+                    email_penerima.add(pembuat_rab_email.strip())
+
+            penerima_final = list(filter(None, email_penerima))
             
-            if initiator_email:
+            if penerima_final:
                 subject = f"[DISETUJUI] SPK untuk Proyek: {row_data.get('Proyek')}"
                 body = f"<p>SPK yang Anda ajukan untuk proyek <b>{row_data.get('Proyek')}</b> ({row_data.get('Nomor Ulok')}) telah disetujui oleh Branch Manager.</p><p>Silakan melakukan input PIC pengawasan melalui link berikut: <a href='https://frontend-form-virid.vercel.app/login.html' target='_blank' rel='noopener noreferrer'>Input PIC Pengawasan</a></p><p>File PDF final terlampir.</p>"
-                google_provider.send_email(to=initiator_email, subject=subject, html_body=body, attachments=[(final_pdf_filename, final_pdf_bytes, 'application/pdf')])
+                google_provider.send_email(to=penerima_final, subject=subject, html_body=body, attachments=[(final_pdf_filename, final_pdf_bytes, 'application/pdf')])
 
             return render_template('response_page.html', title='Persetujuan Berhasil', message='Terima kasih. Persetujuan Anda telah dicatat.', logo_url=logo_url)
 

@@ -496,3 +496,15 @@ class GoogleServiceProvider:
         except Exception as e:
             print(f"Error updating cell [{row_index}, {column_name}] in {worksheet.title}: {e}")
             return False
+        
+    def get_rab_creator_by_ulok(self, nomor_ulok):
+        try:
+            rab_sheet = self.sheet.worksheet(config.DATA_ENTRY_SHEET_NAME)
+            records = rab_sheet.get_all_records()
+            for record in records:
+                if record.get('Nomor Ulok') == nomor_ulok:
+                    return record.get(config.COLUMN_NAMES.EMAIL_PEMBUAT)
+            return None
+        except Exception as e:
+            print(f"Error saat mencari email pembuat RAB untuk Ulok {nomor_ulok}: {e}")
+            return None

@@ -149,7 +149,7 @@ def submit_rab():
         base_url = "https://building-alfamart.onrender.com"
         approver_for_link = coordinator_emails[0]
         approval_url = f"{base_url}/api/handle_rab_approval?action=approve&row={new_row_index}&level=coordinator&approver={approver_for_link}"
-        rejection_url = f"{base_url}/api/handle_rab_approval?action=reject&row={new_row_index}&level=coordinator&approver={approver_for_link}"
+        rejection_url = f"{base_url}/api/reject_form/rab?row={new_row_index}&level=coordinator&approver={approver_for_link}"
         
         email_html = render_template('email_template.html', level='Koordinator', form_data=data, approval_url=approval_url, rejection_url=rejection_url)
         
@@ -167,13 +167,46 @@ def submit_rab():
             google_provider.delete_row(config.DATA_ENTRY_SHEET_NAME, new_row_index)
         traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
-
-@app.route('/api/handle_rab_approval', methods=['GET'])
-def handle_rab_approval():
-    action = request.args.get('action')
-    row_str = request.args.get('row')
+    
+@app.route('/api/reject_form/rab', methods=['GET'])
+def reject_form_rab():
+    row = request.args.get('row')
     level = request.args.get('level')
     approver = request.args.get('approver')
+    
+    if not all([row, level, approver]):
+        return "Parameter tidak lengkap.", 400
+
+    row_data = google_provider.get_row_data(int(row))
+    if not row_data:
+        return "Data permintaan tidak ditemukan.", 404
+
+    logo_url = url_for('static', filename='Alfamart-Emblem.png', _external=True)
+    item_identifier = row_data.get(config.COLUMN_NAMES.LOKASI, 'N/A')
+    
+    return render_template(
+        'rejection_form.html',
+        form_action=url_for('handle_rab_approval', _external=True),
+        row=row,
+        level=level,
+        approver=approver,
+        item_type="RAB",
+        item_identifier=item_identifier,
+        logo_url=logo_url
+    )
+
+@app.route('/api/handle_rab_approval', methods=['GET', 'POST'])
+def handle_rab_approval():
+    if request.method == 'POST':
+        data = request.form
+    else:
+        data = request.args
+
+    action = data.get('action')
+    row_str = data.get('row')
+    level = data.get('level')
+    approver = data.get('approver')
+    reason = data.get('reason', 'Tidak ada alasan yang diberikan.') # Ambil alasan jika ada
     
     logo_url = url_for('static', filename='Alfamart-Emblem.png', _external=True)
 
@@ -221,7 +254,9 @@ def handle_rab_approval():
             google_provider.update_cell(row, config.COLUMN_NAMES.STATUS, new_status)
             if creator_email:
                 subject = f"[DITOLAK] Pengajuan RAB Proyek: {jenis_toko}"
-                body = f"<p>Pengajuan RAB untuk proyek <b>{jenis_toko}</b> telah <b>DITOLAK</b>.</p>"
+                body = (f"<p>Pengajuan RAB untuk proyek <b>{jenis_toko}</b> telah <b>DITOLAK</b>.</p>"
+                        f"<p><b>Alasan Penolakan:</b></p>"
+                        f"<p><i>{reason}</i></p>")
                 google_provider.send_email(to=creator_email, subject=subject, html_body=body)
             return render_template('response_page.html', title='Permintaan Ditolak', message='Status permintaan telah diperbarui.', logo_url=logo_url)
 
@@ -235,7 +270,7 @@ def handle_rab_approval():
                 row_data[config.COLUMN_NAMES.KOORDINATOR_APPROVAL_TIME] = current_time
                 base_url = "https://building-alfamart.onrender.com"
                 approval_url_manager = f"{base_url}/api/handle_rab_approval?action=approve&row={row}&level=manager&approver={manager_email}"
-                rejection_url_manager = f"{base_url}/api/handle_rab_approval?action=reject&row={row}&level=manager&approver={manager_email}"
+                rejection_url_manager = f"{base_url}/api/reject_form/rab?row={row}&level=manager&approver={manager_email}"
                 link_pic = ("Silakan buat SPK melalui link berikut: "
                             "<a href='https://building-alfamart.vercel.app/login.html' "
                             "target='_blank' rel='noopener noreferrer'>Buat SPK</a>")
@@ -387,7 +422,7 @@ def submit_spk():
 
         base_url = "https://building-alfamart.onrender.com"
         approval_url = f"{base_url}/api/handle_spk_approval?action=approve&row={new_row_index}&approver={branch_manager_email}"
-        rejection_url = f"{base_url}/api/handle_spk_approval?action=reject&row={new_row_index}&approver={branch_manager_email}"
+        rejection_url = f"{base_url}/api/reject_form/spk?row={new_row_index}&approver={branch_manager_email}"
 
         email_html = render_template('email_template.html', 
                                      level='Branch Manager', 
@@ -409,12 +444,45 @@ def submit_spk():
             google_provider.delete_row(config.SPK_DATA_SHEET_NAME, new_row_index)
         traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
+    
+@app.route('/api/reject_form/spk', methods=['GET'])
+def reject_form_spk():
+    row = request.args.get('row')
+    approver = request.args.get('approver')
+    
+    if not all([row, approver]):
+        return "Parameter tidak lengkap.", 400
+
+    spk_sheet = google_provider.sheet.worksheet(config.SPK_DATA_SHEET_NAME)
+    row_data = google_provider.get_row_data_by_sheet(spk_sheet, int(row))
+    if not row_data:
+        return "Data permintaan tidak ditemukan.", 404
+
+    logo_url = url_for('static', filename='Alfamart-Emblem.png', _external=True)
+    item_identifier = row_data.get('Nomor Ulok', 'N/A')
+    
+    return render_template(
+        'rejection_form.html',
+        form_action=url_for('handle_spk_approval', _external=True),
+        row=row,
+        approver=approver,
+        level=None, # SPK tidak memiliki 'level'
+        item_type="SPK",
+        item_identifier=item_identifier,
+        logo_url=logo_url
+    )
 
 @app.route('/api/handle_spk_approval', methods=['GET'])
 def handle_spk_approval():
-    action = request.args.get('action')
-    row_str = request.args.get('row')
-    approver = request.args.get('approver')
+    if request.method == 'POST':
+        data = request.form
+    else:
+        data = request.args
+        
+    action = data.get('action')
+    row_str = data.get('row')
+    approver = data.get('approver')
+    reason = data.get('reason', 'Tidak ada alasan yang diberikan.') # Ambil alasan jika ada
     
     logo_url = url_for('static', filename='Alfamart-Emblem.png', _external=True)
 
@@ -487,7 +555,9 @@ def handle_spk_approval():
             
             if initiator_email:
                 subject = f"[DITOLAK] SPK untuk Proyek: {row_data.get('Proyek')}"
-                body = f"<p>SPK yang Anda ajukan untuk proyek <b>{row_data.get('Proyek')}</b> ({row_data.get('Nomor Ulok')}) telah ditolak oleh Branch Manager.</p>"
+                body = (f"<p>SPK yang Anda ajukan untuk proyek <b>{row_data.get('Proyek')}</b> ({row_data.get('Nomor Ulok')}) telah ditolak oleh Branch Manager.</p>"
+                        f"<p><b>Alasan Penolakan:</b></p>"
+                        f"<p><i>{reason}</i></p>")
                 google_provider.send_email(to=initiator_email, subject=subject, html_body=body)
 
             return render_template('response_page.html', title='Permintaan Ditolak', message='Status permintaan telah diperbarui menjadi ditolak.', logo_url=logo_url)

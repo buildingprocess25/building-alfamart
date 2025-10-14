@@ -472,7 +472,7 @@ def reject_form_spk():
         logo_url=logo_url
     )
 
-@app.route('/api/handle_spk_approval', methods=['GET'])
+@app.route('/api/handle_spk_approval', methods=['GET', 'POST'])
 def handle_spk_approval():
     if request.method == 'POST':
         data = request.form

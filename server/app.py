@@ -168,24 +168,46 @@ def submit_rab():
         traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route('/api/handle_rab_approval', methods=['GET', 'POST'])
+@app.route('/api/handle_rab_approval', methods=['GET'])
 def handle_rab_approval():
+    action = request.args.get('action')
+    row_str = request.args.get('row')
+    level = request.args.get('level')
+    approver = request.args.get('approver')
+    
     logo_url = url_for('static', filename='Alfamart-Emblem.png', _external=True)
 
-    if request.method == 'POST':
-        try:
-            row = int(request.form.get('row'))
-            level = request.form.get('level')
-            approver = request.form.get('approver')
-            reason = request.form.get('rejection_reason', 'Tidak ada alasan yang diberikan.')
+    if not all([action, row_str, level, approver]):
+        return render_template('response_page.html', title='Incomplete Parameters', message='URL parameters are incomplete.', logo_url=logo_url), 400
+    try:
+        row = int(row_str)
+        row_data = google_provider.get_row_data(row)
+        if not row_data:
+            return render_template('response_page.html', title='Data Not Found', message='This request may have been deleted.', logo_url=logo_url)
+        
+        item_details_json = row_data.get('Item_Details_JSON', '{}')
+        if item_details_json:
+            try:
+                item_details = json.loads(item_details_json)
+                row_data.update(item_details)
+            except json.JSONDecodeError:
+                print(f"Warning: Could not decode Item_Details_JSON for row {row}")
+        
+        current_status = row_data.get(config.COLUMN_NAMES.STATUS, "").strip()
+        expected_status_map = {'coordinator': config.STATUS.WAITING_FOR_COORDINATOR, 'manager': config.STATUS.WAITING_FOR_MANAGER}
+        
+        if current_status != expected_status_map.get(level):
+            msg = f'This action has already been processed. Current status: <strong>{current_status}</strong>.'
+            return render_template('response_page.html', title='Action Already Processed', message=msg, logo_url=logo_url)
+        
+        WIB = timezone(timedelta(hours=7))
+        current_time = datetime.datetime.now(WIB).isoformat()
+        
+        cabang = row_data.get(config.COLUMN_NAMES.CABANG)
+        jenis_toko = row_data.get(config.COLUMN_NAMES.PROYEK, 'N/A')
+        creator_email = row_data.get(config.COLUMN_NAMES.EMAIL_PEMBUAT)
 
-            row_data = google_provider.get_row_data(row)
-            if not row_data:
-                 return render_template('response_page.html', title='Data Tidak Ditemukan', message='Permintaan ini mungkin sudah diproses atau dihapus.', logo_url=logo_url)
-
-            WIB = timezone(timedelta(hours=7))
-            current_time = datetime.datetime.now(WIB).isoformat()
-            
+        if action == 'reject':
             new_status = ""
             if level == 'coordinator':
                 new_status = config.STATUS.REJECTED_BY_COORDINATOR
@@ -197,64 +219,13 @@ def handle_rab_approval():
                 google_provider.update_cell(row, config.COLUMN_NAMES.MANAGER_APPROVAL_TIME, current_time)
             
             google_provider.update_cell(row, config.COLUMN_NAMES.STATUS, new_status)
-            
-            creator_email = row_data.get(config.COLUMN_NAMES.EMAIL_PEMBUAT)
-            jenis_toko = row_data.get(config.COLUMN_NAMES.PROYEK, 'N/A')
-            
             if creator_email:
                 subject = f"[DITOLAK] Pengajuan RAB Proyek: {jenis_toko}"
-                body = (f"<p>Pengajuan RAB untuk proyek <b>{jenis_toko}</b> telah <b>DITOLAK</b>.</p>"
-                        f"<p><b>Alasan Penolakan:</b></p>"
-                        f"<p><i>{reason}</i></p>"
-                        f"<p>Silakan lakukan revisi dan ajukan kembali.</p>")
+                body = f"<p>Pengajuan RAB untuk proyek <b>{jenis_toko}</b> telah <b>DITOLAK</b>.</p>"
                 google_provider.send_email(to=creator_email, subject=subject, html_body=body)
+            return render_template('response_page.html', title='Permintaan Ditolak', message='Status permintaan telah diperbarui.', logo_url=logo_url)
 
-            return render_template('response_page.html', title='Permintaan Ditolak', message='Status permintaan telah diperbarui dan notifikasi penolakan telah dikirim.', logo_url=logo_url, theme_color='#dc3545', icon='&#10007;')
-
-        except Exception as e:
-            traceback.print_exc()
-            return render_template('response_page.html', title='Error Internal', message=f'Terjadi kesalahan saat memproses penolakan: {str(e)}', logo_url=logo_url), 500
-
-    try:
-        action = request.args.get('action')
-        row_str = request.args.get('row')
-        level = request.args.get('level')
-        approver = request.args.get('approver')
-
-        if not all([action, row_str, level, approver]):
-            return render_template('response_page.html', title='Parameter Tidak Lengkap', message='URL tidak lengkap.', logo_url=logo_url), 400
-        
-        row = int(row_str)
-        row_data = google_provider.get_row_data(row)
-        if not row_data:
-            return render_template('response_page.html', title='Data Tidak Ditemukan', message='Permintaan ini mungkin sudah diproses atau dihapus.', logo_url=logo_url)
-        
-        current_status = row_data.get(config.COLUMN_NAMES.STATUS, "").strip()
-        expected_status_map = {'coordinator': config.STATUS.WAITING_FOR_COORDINATOR, 'manager': config.STATUS.WAITING_FOR_MANAGER}
-        
-        if current_status != expected_status_map.get(level):
-            msg = f'Tindakan ini sudah diproses. Status saat ini: <strong>{current_status}</strong>.'
-            return render_template('response_page.html', title='Tindakan Sudah Diproses', message=msg, logo_url=logo_url)
-        
-        if action == 'reject':
-            return render_template('response_page.html',
-                                   show_rejection_form=True,
-                                   title='Alasan Penolakan RAB',
-                                   message='Mohon berikan alasan mengapa pengajuan RAB ini ditolak.',
-                                   form_action=url_for('handle_rab_approval'),
-                                   row=row,
-                                   level=level,
-                                   approver=approver,
-                                   logo_url=logo_url,
-                                   theme_color='#dc3545'
-                                  )
-
-        WIB = timezone(timedelta(hours=7))
-        current_time = datetime.datetime.now(WIB).isoformat()
-        cabang = row_data.get(config.COLUMN_NAMES.CABANG)
-        jenis_toko = row_data.get(config.COLUMN_NAMES.PROYEK, 'N/A')
-
-        if level == 'coordinator' and action == 'approve':
+        elif level == 'coordinator' and action == 'approve':
             google_provider.update_cell(row, config.COLUMN_NAMES.STATUS, config.STATUS.WAITING_FOR_MANAGER)
             google_provider.update_cell(row, config.COLUMN_NAMES.KOORDINATOR_APPROVER, approver)
             google_provider.update_cell(row, config.COLUMN_NAMES.KOORDINATOR_APPROVAL_TIME, current_time)
@@ -272,36 +243,45 @@ def handle_rab_approval():
                 pdf_bytes = create_pdf_from_data(google_provider, row_data)
                 pdf_filename = f"RAB_ALFAMART({jenis_toko}).pdf"
                 google_provider.send_email(manager_email, f"[TAHAP 2: PERLU PERSETUJUAN] RAB Proyek: {jenis_toko}", email_html_manager, attachments=[(pdf_filename, pdf_bytes, 'application/pdf')])
-            return render_template('response_page.html', title='Persetujuan Diteruskan', message='Terima kasih. Persetujuan Anda telah dicatat.', logo_url=logo_url, theme_color='#28a745', icon='&#10003;')
-
+            return render_template('response_page.html', title='Persetujuan Diteruskan', message='Terima kasih. Persetujuan Anda telah dicatat.', logo_url=logo_url)
+        
         elif level == 'manager' and action == 'approve':
             google_provider.update_cell(row, config.COLUMN_NAMES.STATUS, config.STATUS.APPROVED)
             google_provider.update_cell(row, config.COLUMN_NAMES.MANAGER_APPROVER, approver)
             google_provider.update_cell(row, config.COLUMN_NAMES.MANAGER_APPROVAL_TIME, current_time)
+            
             row_data[config.COLUMN_NAMES.STATUS] = config.STATUS.APPROVED
             row_data[config.COLUMN_NAMES.MANAGER_APPROVER] = approver
             row_data[config.COLUMN_NAMES.MANAGER_APPROVAL_TIME] = current_time
+            
             pdf_lengkap_bytes = create_pdf_from_data(google_provider, row_data, exclude_sbo=False)
             pdf_lengkap_filename = f"DISETUJUI_RAB_LENGKAP_{jenis_toko}_{row_data.get('Nomor Ulok')}.pdf"
+            
             pdf_nonsbo_bytes = create_pdf_from_data(google_provider, row_data, exclude_sbo=True)
             pdf_nonsbo_filename = f"DISETUJUI_RAB_NON-SBO_{jenis_toko}_{row_data.get('Nomor Ulok')}.pdf"
+
             link_pdf_lengkap = google_provider.upload_file_to_drive(pdf_lengkap_bytes, pdf_lengkap_filename, 'application/pdf', config.PDF_STORAGE_FOLDER_ID)
             link_pdf_nonsbo = google_provider.upload_file_to_drive(pdf_nonsbo_bytes, pdf_nonsbo_filename, 'application/pdf', config.PDF_STORAGE_FOLDER_ID)
+
             google_provider.update_cell(row, config.COLUMN_NAMES.LINK_PDF, link_pdf_lengkap)
             google_provider.update_cell(row, config.COLUMN_NAMES.LINK_PDF_NONSBO, link_pdf_nonsbo)
+            
             row_data[config.COLUMN_NAMES.LINK_PDF] = link_pdf_lengkap
             row_data[config.COLUMN_NAMES.LINK_PDF_NONSBO] = link_pdf_nonsbo
+            
             google_provider.copy_to_approved_sheet(row_data)
-            creator_email = row_data.get(config.COLUMN_NAMES.EMAIL_PEMBUAT)
+
             if creator_email:
                 kontraktor_emails = google_provider.get_emails_by_jabatan(cabang, config.JABATAN.KONTRAKTOR)
                 coordinator_emails = google_provider.get_emails_by_jabatan(cabang, config.JABATAN.KOORDINATOR)
                 manager_email = approver
                 cc_set = set(filter(None, kontraktor_emails + coordinator_emails))
                 cc_set.add(manager_email)
+                
                 cc_list = list(cc_set)
                 if creator_email in cc_list:
                     cc_list.remove(creator_email)
+                
                 subject = f"[FINAL - DISETUJUI] Pengajuan RAB Proyek: {jenis_toko}"
                 email_body_html = (f"<p>Pengajuan RAB untuk proyek <b>{jenis_toko}</b> di cabang <b>{cabang}</b> telah disetujui sepenuhnya.</p>"
                                    f"<p>Dua versi file PDF RAB telah dilampirkan:</p>"
@@ -314,17 +294,24 @@ def handle_rab_approval():
                                    f"<li><a href='{link_pdf_lengkap}'>Link PDF Lengkap</a></li>"
                                    f"<li><a href='{link_pdf_nonsbo}'>Link PDF Non-SBO</a></li>"
                                    f"</ul>")
+
                 email_attachments = [
                     (pdf_lengkap_filename, pdf_lengkap_bytes, 'application/pdf'),
                     (pdf_nonsbo_filename, pdf_nonsbo_bytes, 'application/pdf')
                 ]
-                google_provider.send_email(to=creator_email, cc=cc_list, subject=subject, html_body=email_body_html, attachments=email_attachments)
-            return render_template('response_page.html', title='Persetujuan Berhasil', message='Tindakan Anda telah berhasil diproses.', logo_url=logo_url, theme_color='#28a745', icon='&#10003;')
+                
+                google_provider.send_email(
+                    to=creator_email,
+                    cc=cc_list,
+                    subject=subject,
+                    html_body=email_body_html,
+                    attachments=email_attachments
+                )
+            return render_template('response_page.html', title='Persetujuan Berhasil', message='Tindakan Anda telah berhasil diproses.', logo_url=logo_url)
 
     except Exception as e:
         traceback.print_exc()
-        return render_template('response_page.html', title='Error Internal', message=f'Terjadi kesalahan: {str(e)}', logo_url=logo_url), 500
-
+        return render_template('response_page.html', title='Internal Error', message=f'An internal error occurred: {str(e)}', logo_url=logo_url), 500
 
 # --- ENDPOINTS UNTUK ALUR KERJA SPK ---
 @app.route('/api/get_approved_rab', methods=['GET'])
@@ -423,45 +410,18 @@ def submit_spk():
         traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route('/api/handle_spk_approval', methods=['GET', 'POST'])
+@app.route('/api/handle_spk_approval', methods=['GET'])
 def handle_spk_approval():
+    action = request.args.get('action')
+    row_str = request.args.get('row')
+    approver = request.args.get('approver')
+    
     logo_url = url_for('static', filename='Alfamart-Emblem.png', _external=True)
 
-    if request.method == 'POST':
-        try:
-            row_index = int(request.form.get('row'))
-            reason = request.form.get('rejection_reason', 'Tidak ada alasan yang diberikan.')
-
-            spk_sheet = google_provider.sheet.worksheet(config.SPK_DATA_SHEET_NAME)
-            row_data = google_provider.get_row_data_by_sheet(spk_sheet, row_index)
-            if not row_data:
-                return render_template('response_page.html', title='Data Tidak Ditemukan', message='Permintaan ini mungkin sudah diproses atau dihapus.', logo_url=logo_url)
-            
-            new_status = config.STATUS.SPK_REJECTED
-            google_provider.update_cell_by_sheet(spk_sheet, row_index, 'Status', new_status)
-            
-            initiator_email = row_data.get('Dibuat Oleh')
-            if initiator_email:
-                subject = f"[DITOLAK] SPK untuk Proyek: {row_data.get('Proyek')}"
-                body = (f"<p>SPK yang Anda ajukan untuk proyek <b>{row_data.get('Proyek')}</b> ({row_data.get('Nomor Ulok')}) telah ditolak oleh Branch Manager.</p>"
-                        f"<p><b>Alasan Penolakan:</b></p>"
-                        f"<p><i>{reason}</i></p>")
-                google_provider.send_email(to=initiator_email, subject=subject, html_body=body)
-            
-            return render_template('response_page.html', title='Permintaan Ditolak', message='Status permintaan telah diperbarui menjadi ditolak.', logo_url=logo_url, theme_color='#dc3545', icon='&#10007;')
-
-        except Exception as e:
-            traceback.print_exc()
-            return render_template('response_page.html', title='Error Internal', message=f'Terjadi kesalahan saat memproses penolakan: {str(e)}', logo_url=logo_url), 500
-
+    if not all([action, row_str, approver]):
+        return render_template('response_page.html', title='Parameter Tidak Lengkap', message='URL tidak lengkap.', logo_url=logo_url), 400
+    
     try:
-        action = request.args.get('action')
-        row_str = request.args.get('row')
-        approver = request.args.get('approver')
-
-        if not all([action, row_str, approver]):
-            return render_template('response_page.html', title='Parameter Tidak Lengkap', message='URL tidak lengkap.', logo_url=logo_url), 400
-        
         row_index = int(row_str)
         spk_sheet = google_provider.sheet.worksheet(config.SPK_DATA_SHEET_NAME)
         row_data = google_provider.get_row_data_by_sheet(spk_sheet, row_index)
@@ -473,23 +433,13 @@ def handle_spk_approval():
         if current_status != config.STATUS.WAITING_FOR_BM_APPROVAL:
             msg = f'Tindakan ini sudah diproses. Status saat ini: <strong>{current_status}</strong>.'
             return render_template('response_page.html', title='Tindakan Sudah Diproses', message=msg, logo_url=logo_url)
-    
-        if action == 'reject':
-             return render_template('response_page.html',
-                                   show_rejection_form=True,
-                                   title='Alasan Penolakan SPK',
-                                   message='Mohon berikan alasan mengapa pengajuan SPK ini ditolak.',
-                                   form_action=url_for('handle_spk_approval'),
-                                   row=row_index,
-                                   approver=approver,
-                                   logo_url=logo_url,
-                                   theme_color='#dc3545'
-                                  )
 
+        WIB = timezone(timedelta(hours=7))
+        current_time = datetime.datetime.now(WIB).isoformat()
+        
+        initiator_email = row_data.get('Dibuat Oleh')
+        
         if action == 'approve':
-            WIB = timezone(timedelta(hours=7))
-            current_time = datetime.datetime.now(WIB).isoformat()
-            
             new_status = config.STATUS.SPK_APPROVED
             google_provider.update_cell_by_sheet(spk_sheet, row_index, 'Status', new_status)
             google_provider.update_cell_by_sheet(spk_sheet, row_index, 'Disetujui Oleh', approver)
@@ -498,12 +448,15 @@ def handle_spk_approval():
             row_data['Status'] = new_status
             row_data['Disetujui Oleh'] = approver
             row_data['Waktu Persetujuan'] = current_time
+
+
             final_pdf_bytes = create_spk_pdf(google_provider, row_data)
             final_pdf_filename = f"SPK_DISETUJUI_{row_data.get('Proyek')}_{row_data.get('Nomor Ulok')}.pdf"
             final_pdf_link = google_provider.upload_file_to_drive(final_pdf_bytes, final_pdf_filename, 'application/pdf', config.PDF_STORAGE_FOLDER_ID)
             google_provider.update_cell_by_sheet(spk_sheet, row_index, 'Link PDF', final_pdf_link)
-            
+
             email_penerima = set()
+
             pembuat_spk_email = row_data.get('Dibuat Oleh')
             if pembuat_spk_email:
                 email_penerima.add(pembuat_spk_email.strip())
@@ -513,6 +466,7 @@ def handle_spk_approval():
                 email_penerima.add(penyetuju_spk_email.strip())
 
             nomor_ulok_spk = row_data.get('Nomor Ulok')
+
             if nomor_ulok_spk:
                 pembuat_rab_email = google_provider.get_rab_creator_by_ulok(nomor_ulok_spk)
                 if pembuat_rab_email:
@@ -521,18 +475,22 @@ def handle_spk_approval():
             penerima_final = list(filter(None, email_penerima))
             
             if penerima_final:
-                subject = f"[DISETUJUI] SPK untuk Proyek: {row_data.get('Proyek')} - {row_data.get('Nomor Ulok')}"
-                body = (f"<p>SPK untuk proyek <b>{row_data.get('Proyek')}</b> ({row_data.get('Nomor Ulok')}) telah disetujui oleh Branch Manager.</p>"
-                        f"<p>File PDF final terlampir dalam email ini.</p>"
-                        f"<p>Selanjutnya, PIC yang ditunjuk diharapkan melakukan input PIC pengawasan melalui link berikut: <a href='https://frontend-form-virid.vercel.app/login.html' target='_blank' rel='noopener noreferrer'>Input PIC Pengawasan</a></p>")
-                google_provider.send_email(
-                    to=penerima_final, 
-                    subject=subject, 
-                    html_body=body, 
-                    attachments=[(final_pdf_filename, final_pdf_bytes, 'application/pdf')]
-                )
+                subject = f"[DISETUJUI] SPK untuk Proyek: {row_data.get('Proyek')}"
+                body = f"<p>SPK yang Anda ajukan untuk proyek <b>{row_data.get('Proyek')}</b> ({row_data.get('Nomor Ulok')}) telah disetujui oleh Branch Manager.</p><p>Silakan melakukan input PIC pengawasan melalui link berikut: <a href='https://frontend-form-virid.vercel.app/login.html' target='_blank' rel='noopener noreferrer'>Input PIC Pengawasan</a></p><p>File PDF final terlampir.</p>"
+                google_provider.send_email(to=penerima_final, subject=subject, html_body=body, attachments=[(final_pdf_filename, final_pdf_bytes, 'application/pdf')])
 
-            return render_template('response_page.html', title='Persetujuan Berhasil', message='Terima kasih. Persetujuan Anda telah dicatat dan notifikasi email telah dikirim.', logo_url=logo_url, theme_color='#28a745', icon='&#10003;')
+            return render_template('response_page.html', title='Persetujuan Berhasil', message='Terima kasih. Persetujuan Anda telah dicatat.', logo_url=logo_url)
+
+        elif action == 'reject':
+            new_status = config.STATUS.SPK_REJECTED
+            google_provider.update_cell_by_sheet(spk_sheet, row_index, 'Status', new_status)
+            
+            if initiator_email:
+                subject = f"[DITOLAK] SPK untuk Proyek: {row_data.get('Proyek')}"
+                body = f"<p>SPK yang Anda ajukan untuk proyek <b>{row_data.get('Proyek')}</b> ({row_data.get('Nomor Ulok')}) telah ditolak oleh Branch Manager.</p>"
+                google_provider.send_email(to=initiator_email, subject=subject, html_body=body)
+
+            return render_template('response_page.html', title='Permintaan Ditolak', message='Status permintaan telah diperbarui menjadi ditolak.', logo_url=logo_url)
 
     except Exception as e:
         traceback.print_exc()

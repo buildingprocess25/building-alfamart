@@ -52,63 +52,19 @@
             color: #9ca3af;
             margin-top: 30px;
         }
-        /* Style untuk Form Penolakan */
-        .rejection-form {
-            margin-top: 20px;
-        }
-        .rejection-form textarea {
-            width: 95%;
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid #d1d5db;
-            font-size: 14px;
-            min-height: 100px;
-            margin-bottom: 15px;
-            resize: vertical;
-        }
-        .rejection-form button {
-            background-color: {{ theme_color | default('#dc3545') }};
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            font-size: 16px;
-            font-weight: 600;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        .rejection-form button:hover {
-            background-color: #c82333;
-        }
     </style>
 </head>
 <body>
     <div class="card">
         <img src="{{ logo_url }}" alt="Logo Alfamart" class="logo">
         
-        {% if show_rejection_form %}
-        <h1>{{ title }}</h1>
-        <p>{{ message | safe }}</p>
-
-        <form action="{{ form_action }}" method="POST" class="rejection-form">
-            <input type="hidden" name="row" value="{{ row }}">
-            <input type="hidden" name="approver" value="{{ approver }}">
-            {% if level %}
-            <input type="hidden" name="level" value="{{ level }}">
-            {% endif %}
-            
-            <textarea name="rejection_reason" placeholder="Contoh: Total biaya melebihi budget, perlu revisi pada item pekerjaan finishing..." required></textarea>
-            
-            <button type="submit">Kirim Alasan Penolakan</button>
-        </form>
-        
-        {% else %}
         <div class="icon">{{ icon | safe }}</div>
+        
         <h1>{{ title }}</h1>
-        <p>{{ message | safe }}</p>
-        <div class="footer">Anda bisa menutup halaman ini.</div>
-        {% endif %}
 
+        <p>{{ message | safe }}</p>
+        
+        <div class="footer">Anda bisa menutup halaman ini.</div>
     </div>
 </body>
 </html>

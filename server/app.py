@@ -544,7 +544,7 @@ def handle_spk_approval():
             
             if penerima_final:
                 subject = f"[DISETUJUI] SPK untuk Proyek: {row_data.get('Proyek')}"
-                body = f"<p>SPK yang Anda ajukan untuk proyek <b>{row_data.get('Proyek')}</b> ({row_data.get('Nomor Ulok')}) telah disetujui oleh Branch Manager.</p><p>Silakan melakukan input PIC pengawasan melalui link berikut: <a href='https://frontend-form-virid.vercel.app/login.html' target='_blank' rel='noopener noreferrer'>Input PIC Pengawasan</a></p><p>File PDF final terlampir.</p>"
+                body = f"<p>SPK yang Anda ajukan untuk proyek <b>{row_data.get('Proyek')}</b> ({row_data.get('Nomor Ulok')}) telah disetujui oleh Branch Manager.</p><p>Silakan melakukan input PIC pengawasan melalui link berikut: <a href='https://pengawasan-building.vercel.app/pengawasan/login.html' target='_blank' rel='noopener noreferrer'>Input PIC Pengawasan</a></p><p>File PDF final terlampir.</p>"
                 google_provider.send_email(to=penerima_final, subject=subject, html_body=body, attachments=[(final_pdf_filename, final_pdf_bytes, 'application/pdf')])
 
             return render_template('response_page.html', title='Persetujuan Berhasil', message='Terima kasih. Persetujuan Anda telah dicatat.', logo_url=logo_url)

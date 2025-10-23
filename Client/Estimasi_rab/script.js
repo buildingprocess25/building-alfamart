@@ -108,6 +108,7 @@ function getCurrentFormData() {
             data[`Volume_Item_${itemIndex}`] = volume;
             data[`Harga_Material_Item_${itemIndex}`] = parseFormattedNumber(row.querySelector('.harga-material').value);
             data[`Harga_Upah_Item_${itemIndex}`] = parseFormattedNumber(row.querySelector('.harga-upah').value);
+            data["nama_toko"] =data["Nama_Toko"] ||document.getElementById("nama_toko")?.value?.trim() ||"";
             itemIndex++;
         }
     });
@@ -372,147 +373,181 @@ const calculateGrandTotal = () => {
 };
 
 async function populateFormWithHistory(data) {
-    form.reset();
-    sipilTablesWrapper.innerHTML = "";
-    meTablesWrapper.innerHTML = "";
+  form.reset();
+  sipilTablesWrapper.innerHTML = "";
+  meTablesWrapper.innerHTML = "";
 
-    const nomorUlok = data["Nomor Ulok"];
-    if (nomorUlok && (nomorUlok.length === 12 || nomorUlok.length === 14)) {
-        const ulokParts = nomorUlok.replace(/-/g, '').match(/^(.{4})(.{4})(.{4})$/);
-        if (ulokParts) {
-            document.getElementById('lokasi_cabang').value = ulokParts[1];
-            document.getElementById('lokasi_tanggal').value = ulokParts[2];
-            document.getElementById('lokasi_manual').value = ulokParts[3];
-            updateNomorUlok();
-        }
+  const nomorUlok = data["Nomor Ulok"];
+  if (nomorUlok && (nomorUlok.length === 12 || nomorUlok.length === 14)) {
+    const ulokParts = nomorUlok.replace(/-/g, "").match(/^(.{4})(.{4})(.{4})$/);
+    if (ulokParts) {
+      document.getElementById("lokasi_cabang").value = ulokParts[1];
+      document.getElementById("lokasi_tanggal").value = ulokParts[2];
+      document.getElementById("lokasi_manual").value = ulokParts[3];
+      updateNomorUlok();
     }
+  }
+  // Isi ulang field Nama Toko dari riwayat (dukung kedua penamaan)
+  if (data["nama_toko"]) {
+    document.getElementById("nama_toko").value = data["nama_toko"];
+  } else if (data["Nama_Toko"]) {
+    document.getElementById("nama_toko").value = data["Nama_Toko"];
+  }
 
-    for (const key in data) {
-        const input = form.querySelector(`[name="${key}"]`);
-        if (input && key !== "Nomor Ulok") {
-            input.value = data[key];
-        }
+  for (const key in data) {
+    const input = form.querySelector(`[name="${key}"]`);
+    if (input && key !== "Nomor Ulok") {
+      input.value = data[key];
     }
-    
-    const selectedScope = lingkupPekerjaanSelect.value;
-    sipilTablesWrapper.classList.toggle("hidden", selectedScope !== 'Sipil');
-    meTablesWrapper.classList.toggle("hidden", selectedScope !== 'ME');
+  }
 
-    await fetchAndPopulatePrices();
+  const selectedScope = lingkupPekerjaanSelect.value;
+  sipilTablesWrapper.classList.toggle("hidden", selectedScope !== "Sipil");
+  meTablesWrapper.classList.toggle("hidden", selectedScope !== "ME");
 
-    const itemDetails = data['Item_Details_JSON'] ? JSON.parse(data['Item_Details_JSON']) : data;
+  await fetchAndPopulatePrices();
 
-    for (let i = 1; i <= 200; i++) {
-        if (itemDetails[`Jenis_Pekerjaan_${i}`]) {
-            const category = itemDetails[`Kategori_Pekerjaan_${i}`];
-            const scope = lingkupPekerjaanSelect.value;
-            const targetTbody = document.querySelector(`.boq-table-body[data-category="${category}"][data-scope="${scope}"]`);
-            
-            if (targetTbody) {
-                const tableContainer = targetTbody.closest('.table-container');
-                if(tableContainer) tableContainer.style.display = 'block';
+  const itemDetails = data["Item_Details_JSON"]
+    ? JSON.parse(data["Item_Details_JSON"])
+    : data;
 
-                const newRow = createBoQRow(category, scope);
-                targetTbody.appendChild(newRow);
-                populateJenisPekerjaanOptionsForNewRow(newRow);
-                
-                newRow.querySelector('.jenis-pekerjaan').value = itemDetails[`Jenis_Pekerjaan_${i}`];
-                
-                autoFillPrices(newRow.querySelector('.jenis-pekerjaan'));
+  for (let i = 1; i <= 200; i++) {
+    if (itemDetails[`Jenis_Pekerjaan_${i}`]) {
+      const category = itemDetails[`Kategori_Pekerjaan_${i}`];
+      const scope = lingkupPekerjaanSelect.value;
+      const targetTbody = document.querySelector(
+        `.boq-table-body[data-category="${category}"][data-scope="${scope}"]`
+      );
 
-                newRow.querySelector('.volume').value = itemDetails[`Volume_Item_${i}`] || '0.00';
-                
-                const materialInput = newRow.querySelector('.harga-material');
-                const upahInput = newRow.querySelector('.harga-upah');
-                
-                if (!materialInput.readOnly) {
-                    materialInput.value = formatNumberWithSeparators(itemDetails[`Harga_Material_Item_${i}`]);
-                }
-                if (!upahInput.readOnly) {
-                    upahInput.value = formatNumberWithSeparators(itemDetails[`Harga_Upah_Item_${i}`]);
-                }
-                calculateTotalPrice(newRow.querySelector('.volume'));
-            }
+      if (targetTbody) {
+        const tableContainer = targetTbody.closest(".table-container");
+        if (tableContainer) tableContainer.style.display = "block";
+
+        const newRow = createBoQRow(category, scope);
+        targetTbody.appendChild(newRow);
+        populateJenisPekerjaanOptionsForNewRow(newRow);
+
+        newRow.querySelector(".jenis-pekerjaan").value =
+          itemDetails[`Jenis_Pekerjaan_${i}`];
+
+        autoFillPrices(newRow.querySelector(".jenis-pekerjaan"));
+
+        newRow.querySelector(".volume").value =
+          itemDetails[`Volume_Item_${i}`] || "0.00";
+
+        const materialInput = newRow.querySelector(".harga-material");
+        const upahInput = newRow.querySelector(".harga-upah");
+
+        if (!materialInput.readOnly) {
+          materialInput.value = formatNumberWithSeparators(
+            itemDetails[`Harga_Material_Item_${i}`]
+          );
         }
+        if (!upahInput.readOnly) {
+          upahInput.value = formatNumberWithSeparators(
+            itemDetails[`Harga_Upah_Item_${i}`]
+          );
+        }
+        calculateTotalPrice(newRow.querySelector(".volume"));
+      }
     }
-    
-    updateAllRowNumbersAndTotals();
-    originalFormData = getCurrentFormData();
+  }
+
+  updateAllRowNumbersAndTotals();
+  originalFormData = getCurrentFormData();
 }
 
 
 async function handleFormSubmit() {
-    if (!form.checkValidity()) {
-        form.reportValidity();
-        return;
-    }
+  if (!form.checkValidity()) {
+    form.reportValidity();
+    return;
+  }
 
-    const currentData = getCurrentFormData();
-    if (originalFormData && currentData === originalFormData) {
-        messageDiv.textContent = 'Tidak ada perubahan yang terdeteksi. Silakan ubah data sebelum mengirim.';
-        messageDiv.style.backgroundColor = '#ffc107';
-        messageDiv.style.display = 'block';
-        return;
-    }
+  const currentData = getCurrentFormData();
+  if (originalFormData && currentData === originalFormData) {
+    messageDiv.textContent =
+      "Tidak ada perubahan yang terdeteksi. Silakan ubah data sebelum mengirim.";
+    messageDiv.style.backgroundColor = "#ffc107";
+    messageDiv.style.display = "block";
+    return;
+  }
 
-    submitButton.disabled = true;
-    messageDiv.textContent = 'Mengirim data...';
-    messageDiv.style.display = 'block';
-    messageDiv.style.backgroundColor = '#007bff';
+  submitButton.disabled = true;
+  messageDiv.textContent = "Mengirim data...";
+  messageDiv.style.display = "block";
+  messageDiv.style.backgroundColor = "#007bff";
 
-    const formData = new FormData(form);
-    const data = Object.fromEntries(formData.entries());
-    
-    data['Cabang'] = cabangSelect.value;
-    data['Email_Pembuat'] = sessionStorage.getItem('loggedInUserEmail');
-    data['Grand Total'] = parseRupiah(grandTotalAmount.textContent);
+  const formData = new FormData(form);
+  const data = Object.fromEntries(formData.entries());
 
-    let itemIndex = 1;
-    document.querySelectorAll(".boq-table-body:not(.hidden) .boq-item-row").forEach(row => {
-        const jenisPekerjaan = row.querySelector('.jenis-pekerjaan').value;
-        const volume = parseFloat(row.querySelector('.volume').value) || 0;
+  // Tambah mapping agar cocok dengan header di Sheets (Form3: nama_toko)
+  data["nama_toko"] =
+    data["Nama_Toko"] ||
+    document.getElementById("nama_toko")?.value?.trim() ||
+    "";
+  // (opsional) simpan juga versi CamelCase untuk kompatibilitas internal
+  data["Nama_Toko"] = data["nama_toko"];
 
-        if (jenisPekerjaan && volume > 0) {
-            const materialInput = row.querySelector('.harga-material');
-            const upahInput = row.querySelector('.harga-upah');
+  data["Cabang"] = cabangSelect.value;
+  data["Email_Pembuat"] = sessionStorage.getItem("loggedInUserEmail");
+  data["Grand Total"] = parseRupiah(grandTotalAmount.textContent);
 
-            const materialValue = parseFormattedNumber(materialInput.value);
-            const upahValue = parseFormattedNumber(upahInput.value);
+  let itemIndex = 1;
+  document
+    .querySelectorAll(".boq-table-body:not(.hidden) .boq-item-row")
+    .forEach((row) => {
+      const jenisPekerjaan = row.querySelector(".jenis-pekerjaan").value;
+      const volume = parseFloat(row.querySelector(".volume").value) || 0;
 
-            data[`Kategori_Pekerjaan_${itemIndex}`] = row.dataset.category;
-            data[`Jenis_Pekerjaan_${itemIndex}`] = jenisPekerjaan;
-            data[`Satuan_Item_${itemIndex}`] = row.querySelector('.satuan').value;
-            data[`Volume_Item_${itemIndex}`] = volume;
-            data[`Harga_Material_Item_${itemIndex}`] = materialValue;
-            data[`Harga_Upah_Item_${itemIndex}`] = upahValue;
-            data[`Total_Material_Item_${itemIndex}`] = parseRupiah(row.querySelector('.total-material').value);
-            data[`Total_Upah_Item_${itemIndex}`] = parseRupiah(row.querySelector('.total-upah').value);
-            data[`Total_Harga_Item_${itemIndex}`] = parseRupiah(row.querySelector('.total-harga').value);
-            itemIndex++;
-        }
+      if (jenisPekerjaan && volume > 0) {
+        const materialInput = row.querySelector(".harga-material");
+        const upahInput = row.querySelector(".harga-upah");
+
+        const materialValue = parseFormattedNumber(materialInput.value);
+        const upahValue = parseFormattedNumber(upahInput.value);
+
+        data[`Kategori_Pekerjaan_${itemIndex}`] = row.dataset.category;
+        data[`Jenis_Pekerjaan_${itemIndex}`] = jenisPekerjaan;
+        data[`Satuan_Item_${itemIndex}`] = row.querySelector(".satuan").value;
+        data[`Volume_Item_${itemIndex}`] = volume;
+        data[`Harga_Material_Item_${itemIndex}`] = materialValue;
+        data[`Harga_Upah_Item_${itemIndex}`] = upahValue;
+        data[`Total_Material_Item_${itemIndex}`] = parseRupiah(
+          row.querySelector(".total-material").value
+        );
+        data[`Total_Upah_Item_${itemIndex}`] = parseRupiah(
+          row.querySelector(".total-upah").value
+        );
+        data[`Total_Harga_Item_${itemIndex}`] = parseRupiah(
+          row.querySelector(".total-harga").value
+        );
+        itemIndex++;
+      }
     });
 
-    try {
-        const response = await fetch(`${PYTHON_API_BASE_URL}/api/submit_rab`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
-        });
+  try {
+    const response = await fetch(`${PYTHON_API_BASE_URL}/api/submit_rab`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
 
-        const result = await response.json();
+    const result = await response.json();
 
-        if (response.ok && result.status === 'success') {
-            messageDiv.textContent = 'Data berhasil dikirim! Halaman akan dimuat ulang.';
-            messageDiv.style.backgroundColor = '#28a745';
-            setTimeout(() => window.location.reload(), 2000);
-        } else {
-            throw new Error(result.message || 'Terjadi kesalahan di server.');
-        }
-    } catch (error) {
-        messageDiv.textContent = `Error: ${error.message}`;
-        messageDiv.style.backgroundColor = '#dc3545';
-        submitButton.disabled = false;
+    if (response.ok && result.status === "success") {
+      messageDiv.textContent =
+        "Data berhasil dikirim! Halaman akan dimuat ulang.";
+      messageDiv.style.backgroundColor = "#28a745";
+      setTimeout(() => window.location.reload(), 2000);
+    } else {
+      throw new Error(result.message || "Terjadi kesalahan di server.");
     }
+  } catch (error) {
+    messageDiv.textContent = `Error: ${error.message}`;
+    messageDiv.style.backgroundColor = "#dc3545";
+    submitButton.disabled = false;
+  }
 }
 
 function createTableStructure(categoryName, scope) {

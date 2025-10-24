@@ -124,6 +124,7 @@ def submit_rab():
         pdf_bytes = create_pdf_from_data(google_provider, data, exclude_sbo=False)
         
         jenis_toko = data.get('Proyek', 'N/A')
+        nama_toko = data.get('Nama_Toko', data.get('nama_toko', 'N/A'))
         
         nomor_ulok_formatted = nomor_ulok_raw
         if isinstance(nomor_ulok_raw, str) and len(nomor_ulok_raw) == 12:
@@ -155,7 +156,7 @@ def submit_rab():
         
         google_provider.send_email(
             to=coordinator_emails,
-            subject=f"[TAHAP 1: PERLU PERSETUJUAN] RAB Proyek: {jenis_toko}", 
+            subject=f"[TAHAP 1: PERLU PERSETUJUAN] RAB Proyek: {jenis_toko} - {nama_toko}", 
             html_body=email_html, 
             attachments=[(pdf_filename, pdf_bytes, 'application/pdf')]
         )
@@ -238,6 +239,8 @@ def handle_rab_approval():
         
         cabang = row_data.get(config.COLUMN_NAMES.CABANG)
         jenis_toko = row_data.get(config.COLUMN_NAMES.PROYEK, 'N/A')
+        nama_toko = row_data.get('Nama_Toko', row_data.get('nama_toko', 'N/A'))
+
         creator_email = row_data.get(config.COLUMN_NAMES.EMAIL_PEMBUAT)
 
         if action == 'reject':
@@ -253,7 +256,7 @@ def handle_rab_approval():
             
             google_provider.update_cell(row, config.COLUMN_NAMES.STATUS, new_status)
             if creator_email:
-                subject = f"[DITOLAK] Pengajuan RAB Proyek: {jenis_toko}"
+                subject = f"[DITOLAK] Pengajuan RAB Proyek: {jenis_toko} - {nama_toko}"
                 body = (f"<p>Pengajuan RAB untuk proyek <b>{jenis_toko}</b> telah <b>DITOLAK</b>.</p>"
                         f"<p><b>Alasan Penolakan:</b></p>"
                         f"<p><i>{reason}</i></p>")
@@ -277,7 +280,7 @@ def handle_rab_approval():
                 email_html_manager = render_template('email_template.html', level='Manajer', form_data=row_data, approval_url=approval_url_manager, rejection_url=rejection_url_manager, additional_info=f"Telah disetujui oleh Koordinator: {approver}<br><br>{link_pic}")
                 pdf_bytes = create_pdf_from_data(google_provider, row_data)
                 pdf_filename = f"RAB_ALFAMART({jenis_toko}).pdf"
-                google_provider.send_email(manager_email, f"[TAHAP 2: PERLU PERSETUJUAN] RAB Proyek: {jenis_toko}", email_html_manager, attachments=[(pdf_filename, pdf_bytes, 'application/pdf')])
+                google_provider.send_email(manager_email, f"[TAHAP 2: PERLU PERSETUJUAN] RAB Proyek: {jenis_toko} - {nama_toko}", email_html_manager, attachments=[(pdf_filename, pdf_bytes, 'application/pdf')])
             return render_template('response_page.html', title='Persetujuan Diteruskan', message='Terima kasih. Persetujuan Anda telah dicatat.', logo_url=logo_url)
         
         elif level == 'manager' and action == 'approve':
@@ -317,7 +320,7 @@ def handle_rab_approval():
                 if creator_email in cc_list:
                     cc_list.remove(creator_email)
                 
-                subject = f"[FINAL - DISETUJUI] Pengajuan RAB Proyek: {jenis_toko}"
+                subject = f"[FINAL - DISETUJUI] Pengajuan RAB Proyek: {jenis_toko} - {nama_toko}"
                 email_body_html = (f"<p>Pengajuan RAB untuk proyek <b>{jenis_toko}</b> di cabang <b>{cabang}</b> telah disetujui sepenuhnya.</p>"
                                    f"<p>Dua versi file PDF RAB telah dilampirkan:</p>"
                                    f"<ul>"
@@ -397,6 +400,8 @@ def submit_spk():
         data['Terbilang'] = f"( {terbilang_text} Rupiah )"
 
         cabang = data.get('Cabang')
+        nama_toko = data.get('Nama_Toko', data.get('nama_toko', 'N/A'))
+        jenis_toko = data.get('Jenis_Toko', data.get('Proyek', 'N/A'))
         
         spk_sequence = google_provider.get_next_spk_sequence(cabang, now.year, now.month)
         spk_manual_1 = data.get('spk_manual_1', '')
@@ -432,7 +437,7 @@ def submit_spk():
         
         google_provider.send_email(
             to=branch_manager_email, 
-            subject=f"[PERLU PERSETUJUAN SPK] Proyek: {data.get('Proyek')}", 
+            subject=f"[PERLU PERSETUJUAN BM] SPK Proyek: {jenis_toko} - {nama_toko}",
             html_body=email_html, 
             attachments=[(pdf_filename, pdf_bytes, 'application/pdf')]
         )
@@ -541,9 +546,12 @@ def handle_spk_approval():
                     email_penerima.add(pembuat_rab_email.strip())
 
             penerima_final = list(filter(None, email_penerima))
-            
+
+            jenis_toko = row_data.get('Jenis_Toko', row_data.get('Proyek', 'N/A'))
+            nama_toko = row_data.get('Nama_Toko', row_data.get('nama_toko', 'N/A'))
+
             if penerima_final:
-                subject = f"[DISETUJUI] SPK untuk Proyek: {row_data.get('Proyek')}"
+                subject=f"[DISETUJUI] SPK Proyek: {jenis_toko} - {nama_toko}"
                 body = f"<p>SPK yang Anda ajukan untuk proyek <b>{row_data.get('Proyek')}</b> ({row_data.get('Nomor Ulok')}) telah disetujui oleh Branch Manager.</p><p>Silakan melakukan input PIC pengawasan melalui link berikut: <a href='https://frontend-form-virid.vercel.app/login-input_pic.html' target='_blank' rel='noopener noreferrer'>Input PIC Pengawasan</a><p>Silakan melakukan Opname melalui link berikut: <a href='https://opnamebnm.vercel.app/' target='_blank' rel='noopener noreferrer'>Pengisian Opname</a></p><p>File PDF final terlampir.</p>"
                 google_provider.send_email(to=penerima_final, subject=subject, html_body=body, attachments=[(final_pdf_filename, final_pdf_bytes, 'application/pdf')])
 
@@ -553,8 +561,11 @@ def handle_spk_approval():
             new_status = config.STATUS.SPK_REJECTED
             google_provider.update_cell_by_sheet(spk_sheet, row_index, 'Status', new_status)
             
+            jenis_toko = row_data.get('Jenis_Toko', row_data.get('Proyek', 'N/A'))
+            nama_toko = row_data.get('Nama_Toko', row_data.get('nama_toko', 'N/A'))
+
             if initiator_email:
-                subject = f"[DITOLAK] SPK untuk Proyek: {row_data.get('Proyek')}"
+                subject = f"[DITOLAK] SPK untuk Proyek: {jenis_toko} - {nama_toko}"
                 body = (f"<p>SPK yang Anda ajukan untuk proyek <b>{row_data.get('Proyek')}</b> ({row_data.get('Nomor Ulok')}) telah ditolak oleh Branch Manager.</p>"
                         f"<p><b>Alasan Penolakan:</b></p>"
                         f"<p><i>{reason}</i></p>")

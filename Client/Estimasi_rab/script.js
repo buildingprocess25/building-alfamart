@@ -108,7 +108,7 @@ function getCurrentFormData() {
             data[`Volume_Item_${itemIndex}`] = volume;
             data[`Harga_Material_Item_${itemIndex}`] = parseFormattedNumber(row.querySelector('.harga-material').value);
             data[`Harga_Upah_Item_${itemIndex}`] = parseFormattedNumber(row.querySelector('.harga-upah').value);
-            data["nama_toko"] =data["nama_toko"] ||document.getElementById("nama_toko")?.value?.trim() ||"";
+            data["nama_toko"] =data["Nama_Toko"] ||document.getElementById("nama_toko")?.value?.trim() ||"";
             itemIndex++;
         }
     });
@@ -390,8 +390,8 @@ async function populateFormWithHistory(data) {
   // Isi ulang field Nama Toko dari riwayat (dukung kedua penamaan)
   if (data["nama_toko"]) {
     document.getElementById("nama_toko").value = data["nama_toko"];
-  } else if (data["nama_toko"]) {
-    document.getElementById("nama_toko").value = data["nama_toko"];
+  } else if (data["Nama_Toko"]) {
+    document.getElementById("nama_toko").value = data["Nama_Toko"];
   }
 
   for (const key in data) {
@@ -483,11 +483,11 @@ async function handleFormSubmit() {
 
   // Tambah mapping agar cocok dengan header di Sheets (Form3: nama_toko)
   data["nama_toko"] =
-    data["nama_toko"] ||
+    data["Nama_Toko"] ||
     document.getElementById("nama_toko")?.value?.trim() ||
     "";
   // (opsional) simpan juga versi CamelCase untuk kompatibilitas internal
-  data["nama_toko"] = data["nama_toko"];
+  data["Nama_Toko"] = data["nama_toko"];
 
   data["Cabang"] = cabangSelect.value;
   data["Email_Pembuat"] = sessionStorage.getItem("loggedInUserEmail");

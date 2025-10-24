@@ -98,3 +98,29 @@ button[type="submit"]:active {
     margin-top: 1rem;
     font-weight: 500;
 }
+
+.password-wrapper {
+    position: relative;
+}
+
+.form-group .password-wrapper input#password {
+    padding-right: 40px; 
+}
+
+.toggle-password {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: var(--label-color);
+    width: 20px;
+    height: 20px;
+    display: grid;
+    place-items: center;
+}
+
+.toggle-password svg {
+    width: 100%;
+    height: 100%;
+}

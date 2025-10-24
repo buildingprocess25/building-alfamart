@@ -35,6 +35,26 @@ async function logLoginAttempt(username, cabang, status) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    const passwordInput = document.getElementById("password");
+    const togglePassword = document.getElementById("togglePassword");
+    const eyeOpen = document.getElementById("eyeOpen");
+    const eyeSlashed = document.getElementById("eyeSlashed");
+
+    if (passwordInput && togglePassword && eyeOpen && eyeSlashed) {
+        togglePassword.addEventListener("click", () => {
+            const type = passwordInput.getAttribute("type") === "password" ? "text" : "password";
+            passwordInput.setAttribute("type", type);
+
+            if (type === "password") {
+                eyeOpen.style.display = "none";
+                eyeSlashed.style.display = "block";
+            } else {
+                eyeOpen.style.display = "block";
+                eyeSlashed.style.display = "none";
+            }
+        });
+    }
+
     const loginForm = document.getElementById('login-form');
     const loginMessage = document.getElementById('login-message');
 
@@ -42,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
 
         const username = loginForm.username.value;
-        const password = loginForm.password.value;
+        const password = passwordInput.value;
 
         loginMessage.textContent = 'Logging in...';
         loginMessage.className = 'login-message';

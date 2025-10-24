@@ -156,7 +156,7 @@ def submit_rab():
         
         google_provider.send_email(
             to=coordinator_emails,
-            subject=f"[TAHAP 1: PERLU PERSETUJUAN] RAB Proyek: {jenis_toko} - {nama_toko}", 
+            subject=f"[TAHAP 1: PERLU PERSETUJUAN] RAB Proyek: {nama_toko}: {jenis_toko} -", 
             html_body=email_html, 
             attachments=[(pdf_filename, pdf_bytes, 'application/pdf')]
         )
@@ -256,7 +256,7 @@ def handle_rab_approval():
             
             google_provider.update_cell(row, config.COLUMN_NAMES.STATUS, new_status)
             if creator_email:
-                subject = f"[DITOLAK] Pengajuan RAB Proyek: {jenis_toko} - {nama_toko}"
+                subject = f"[DITOLAK] Pengajuan RAB Proyek: {nama_toko}: {jenis_toko}"
                 body = (f"<p>Pengajuan RAB untuk proyek <b>{jenis_toko}</b> telah <b>DITOLAK</b>.</p>"
                         f"<p><b>Alasan Penolakan:</b></p>"
                         f"<p><i>{reason}</i></p>")
@@ -320,7 +320,7 @@ def handle_rab_approval():
                 if creator_email in cc_list:
                     cc_list.remove(creator_email)
                 
-                subject = f"[FINAL - DISETUJUI] Pengajuan RAB Proyek: {jenis_toko} - {nama_toko}"
+                subject = f"[FINAL - DISETUJUI] Pengajuan RAB Proyek: {nama_toko}: {jenis_toko}"
                 email_body_html = (f"<p>Pengajuan RAB untuk proyek <b>{jenis_toko}</b> di cabang <b>{cabang}</b> telah disetujui sepenuhnya.</p>"
                                    f"<p>Dua versi file PDF RAB telah dilampirkan:</p>"
                                    f"<ul>"
@@ -551,7 +551,7 @@ def handle_spk_approval():
             nama_toko = row_data.get('Nama_Toko', row_data.get('nama_toko', 'N/A'))
 
             if penerima_final:
-                subject=f"[DISETUJUI] SPK Proyek: {jenis_toko} - {nama_toko}"
+                subject=f"[DISETUJUI] SPK Proyek: {nama_toko}: {jenis_toko}"
                 body = f"<p>SPK yang Anda ajukan untuk proyek <b>{row_data.get('Proyek')}</b> ({row_data.get('Nomor Ulok')}) telah disetujui oleh Branch Manager.</p><p>Silakan melakukan input PIC pengawasan melalui link berikut: <a href='https://frontend-form-virid.vercel.app/login-input_pic.html' target='_blank' rel='noopener noreferrer'>Input PIC Pengawasan</a><p>Silakan melakukan Opname melalui link berikut: <a href='https://opnamebnm.vercel.app/' target='_blank' rel='noopener noreferrer'>Pengisian Opname</a></p><p>File PDF final terlampir.</p>"
                 google_provider.send_email(to=penerima_final, subject=subject, html_body=body, attachments=[(final_pdf_filename, final_pdf_bytes, 'application/pdf')])
 
@@ -565,7 +565,7 @@ def handle_spk_approval():
             nama_toko = row_data.get('Nama_Toko', row_data.get('nama_toko', 'N/A'))
 
             if initiator_email:
-                subject = f"[DITOLAK] SPK untuk Proyek: {jenis_toko} - {nama_toko}"
+                subject = f"[DITOLAK] SPK untuk Proyek: {nama_toko}: {jenis_toko}"
                 body = (f"<p>SPK yang Anda ajukan untuk proyek <b>{row_data.get('Proyek')}</b> ({row_data.get('Nomor Ulok')}) telah ditolak oleh Branch Manager.</p>"
                         f"<p><b>Alasan Penolakan:</b></p>"
                         f"<p><i>{reason}</i></p>")

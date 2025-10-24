@@ -125,6 +125,7 @@ def submit_rab():
         
         jenis_toko = data.get('Proyek', 'N/A')
         nama_toko = data.get('Nama Toko', 'N/A')
+        data['Nama Toko'] = nama_toko
         
         nomor_ulok_formatted = nomor_ulok_raw
         if isinstance(nomor_ulok_raw, str) and len(nomor_ulok_raw) == 12:

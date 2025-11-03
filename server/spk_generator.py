@@ -68,7 +68,7 @@ def create_spk_pdf(google_provider, spk_data):
 
     start_date_obj = datetime.fromisoformat(spk_data.get('Waktu Mulai'))
     duration = int(spk_data.get('Durasi'))
-    end_date_obj = start_date_obj + timedelta(days=duration)
+    end_date_obj = start_date_obj + timedelta(days=duration - 2)
     start_date_formatted = start_date_obj.strftime('%d %B %Y')
     end_date_formatted = end_date_obj.strftime('%d %B %Y')
 
@@ -86,6 +86,7 @@ def create_spk_pdf(google_provider, spk_data):
         "lingkup_pekerjaan": spk_data.get('Lingkup Pekerjaan'),
         "proyek": spk_data.get('Proyek'),
         "project_address": spk_data.get('Alamat'),
+        "nama_toko": spk_data.get('Nama_Toko'),
         "total_cost_formatted": total_cost_formatted,
         "terbilang": terbilang,
         "start_date": start_date_formatted,

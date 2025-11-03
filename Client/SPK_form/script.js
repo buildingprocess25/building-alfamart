@@ -9,6 +9,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const kontraktorSelect = document.getElementById('nama_kontraktor');
     const spkCabangSpan = document.getElementById('spk_kode_cabang');
     const parCabangSpan = document.getElementById('par_kode_cabang');
+
+    // Variabel baru untuk elemen Nama Toko
+    const detailNamaTokoSpan = document.getElementById('detail_nama_toko');
+    const namaTokoInput = document.getElementById('nama_toko');
     
     const branchToUlokMap = {
         "WHC IMAM BONJOL": "7AZ1", "LUWU": "2VZ1", "KARAWANG": "1JZ1", "REMBANG": "2AZ1",
@@ -79,6 +83,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 data.forEach(rab => {
                     const option = document.createElement('option');
                     const lingkup = rab['Lingkup_Pekerjaan'] || 'N/A';
+                    // Tampilkan Nama Toko di dropdown agar lebih mudah dicari
+                    const namaToko = rab['Nama_Toko'] || rab['nama_toko'] || '';
                     option.value = rab['Nomor Ulok'] + ' (' + lingkup + ')';
                     option.textContent = `${rab['Nomor Ulok']} (${lingkup}) - ${rab['Proyek']}`;
                     ulokSelect.appendChild(option);
@@ -177,7 +183,12 @@ document.addEventListener('DOMContentLoaded', () => {
             data['Lingkup Pekerjaan'] = selectedRab.Lingkup_Pekerjaan;
             data['Grand Total'] = selectedRab['Grand Total Non-SBO'];
             data['Cabang'] = selectedRab.Cabang;
-            
+
+            // TAMBAHAN: Pastikan Nama Toko (dari input hidden) terkirim
+            // data['Nama_Toko'] sudah otomatis ada dari new FormData(form)
+            // Tapi kita tambahkan lagi dari selectedRab untuk JAMINAN datanya benar
+            data['Nama_Toko'] = selectedRab['Nama_Toko'] || selectedRab['nama_toko'] || 'N/A';
+
             const cabangCode = branchToUlokMap[selectedRab.Cabang.toUpperCase()] || selectedRab.Cabang;
             
             data['Nomor SPK'] = `(Otomatis)/PROPNDEV-${cabangCode}/${data.spk_manual_1}/${data.spk_manual_2}`;
@@ -220,7 +231,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const selectedRab = approvedRabData.find(rab => rab['Nomor Ulok'] === selectedUlok && rab['Lingkup_Pekerjaan'] === selectedLingkup);
         
         if (selectedRab) {
+            const namaToko = selectedRab['Nama_Toko'] || selectedRab['nama_toko'] || 'N/A';
+
             document.getElementById('detail_proyek').textContent = selectedRab.Proyek || 'N/A';
+            
+            // TAMBAHAN: Isi data Nama Toko
+            detailNamaTokoSpan.textContent = namaToko;
+            namaTokoInput.value = namaToko; // Simpan di input hidden
+
             document.getElementById('detail_lingkup').textContent = selectedRab.Lingkup_Pekerjaan || 'N/A';
             document.getElementById('detail_total').textContent = formatRupiah(selectedRab['Grand Total Non-SBO'] || 0);
             

@@ -50,14 +50,14 @@
     <div class="content-section">
         <p>Kepada Yth,<br>
         <strong>{{ contractor_name }}</strong><br>
-        Di tempat</p>
+        {{ project_address | safe }}</p>
 
         <p style="margin-top: 30px;">Up. Bpk/Ibu Pimpinan</p>
 
         <h3 class="spk-title">Surat Perintah Kerja (SPK)</h3>
         
         <p>Dengan hormat,</p>
-        <p style="text-align: justify;" >Sesuai dengan surat penawaran Bapak/Ibu ybs. mengenai pekerjaan {{ lingkup_pekerjaan }} pada pekerjaan {{ proyek }}, beralamat di {{ project_address }}, maka dengan ini menunjuk Bapak/Ibu untuk melaksanakan pekerjaan tersebut, dengan ketentuan sebagai berikut:</p>
+        <p style="text-align: justify;" >Sesuai dengan surat penawaran Bapak/Ibu ybs. mengenai pekerjaan {{ lingkup_pekerjaan }} pada toko Alfamart {{ nama_toko }}, pekerjaan {{ proyek }}, beralamat di {{ project_address }}, maka dengan ini menunjuk Bapak/Ibu untuk melaksanakan pekerjaan tersebut, dengan ketentuan sebagai berikut:</p>
         
         <div class="cost-section">
             <ul>

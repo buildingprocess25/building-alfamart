@@ -313,17 +313,11 @@ def create_recap_pdf(google_provider, form_data):
     # Pembulatan: Dibulatkan ke atas (ceil) ke ribuan terdekat
     pembulatan = math.ceil(grand_total_recap / 1000) * 1000
     
-    # DPP NILAI LAIN (Total SBO)
-    dpp_nilai_lain = grand_total_sbo
-    
-    # Dasar Pengenaan Pajak Total
-    total_dpp = pembulatan + dpp_nilai_lain
-    
     # PPN 11%
-    ppn = total_dpp * 0.11
+    ppn = pembulatan * 0.11
     
     # Grand Total Final
-    final_grand_total = total_dpp + ppn
+    final_grand_total = pembulatan + ppn
 
     # 3. Siapkan Data Konteks dan Render Template
     
@@ -374,7 +368,6 @@ def create_recap_pdf(google_provider, form_data):
         category_totals=category_totals,
         grand_total_formatted=format_rupiah(grand_total_recap),
         pembulatan_formatted=format_rupiah(pembulatan),
-        dpp_nilai_lain_formatted=format_rupiah(dpp_nilai_lain),
         ppn_formatted=format_rupiah(ppn),
         final_total_formatted=format_rupiah(final_grand_total)
     )

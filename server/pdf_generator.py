@@ -331,17 +331,17 @@ def create_recap_pdf(google_provider, form_data):
     # Catatan: Fungsi get_approval_details_html harus sudah ada di file ini.
     creator_details = get_approval_details_html(
         google_provider, 
-        form_data.get(config.COLUMN_NAMES.CREATOR_EMAIL), 
+        form_data.get(config.COLUMN_NAMES.EMAIL_PEMBUAT), 
         form_data.get(config.COLUMN_NAMES.TIMESTAMP)
     )
     coordinator_approval_details = get_approval_details_html(
         google_provider, 
-        form_data.get(config.COLUMN_NAMES.KOORDINATOR_APPROVAL_EMAIL), 
+        form_data.get(config.COLUMN_NAMES.KOORDINATOR_APPROVER), 
         form_data.get(config.COLUMN_NAMES.KOORDINATOR_APPROVAL_TIME)
     )
     manager_approval_details = get_approval_details_html(
         google_provider, 
-        form_data.get(config.COLUMN_NAMES.MANAGER_APPROVAL_EMAIL), 
+        form_data.get(config.COLUMN_NAMES.MANAGER_APPROVER), 
         form_data.get(config.COLUMN_NAMES.MANAGER_APPROVAL_TIME)
     )
     

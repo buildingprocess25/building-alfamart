@@ -152,8 +152,14 @@ def create_pdf_from_data(google_provider, form_data, exclude_sbo=False):
         }
         grouped_items[kategori].append(item_to_add)
     
-    ppn = grand_total * 0.11
-    final_grand_total = grand_total + ppn
+    # Pembulatan turun ke kelipatan 10.000
+    pembulatan = math.floor(grand_total / 10000) * 10000
+
+    # PPN 11%
+    ppn = pembulatan * 0.11
+
+    # Grand Total Final
+    final_grand_total = pembulatan + ppn
     
     creator_details = ""
     creator_email = form_data.get(config.COLUMN_NAMES.EMAIL_PEMBUAT)
@@ -199,6 +205,7 @@ def create_pdf_from_data(google_provider, form_data, exclude_sbo=False):
         data=template_data,
         grouped_items=grouped_items,
         grand_total=format_rupiah(grand_total), 
+        pembulatan=format_rupiah(pembulatan),
         ppn=format_rupiah(ppn),
         final_grand_total=format_rupiah(final_grand_total), 
         logo_path=logo_path,
@@ -310,12 +317,12 @@ def create_recap_pdf(google_provider, form_data):
     # TOTAL (Grand Total sebelum SBO dan PPN)
     grand_total_recap = grand_total_non_sbo
     
-    # Pembulatan: Dibulatkan ke atas (ceil) ke ribuan terdekat
-    pembulatan = math.ceil(grand_total_recap / 1000) * 1000
-    
+    # Pembulatan: selalu turun (floor) ke kelipatan 10.000 terdekat
+    pembulatan = math.floor(grand_total_recap / 10000) * 10000
+
     # PPN 11%
     ppn = pembulatan * 0.11
-    
+
     # Grand Total Final
     final_grand_total = pembulatan + ppn
 

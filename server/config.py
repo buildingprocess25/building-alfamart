@@ -39,6 +39,7 @@ class COLUMN_NAMES:
     MANAGER_APPROVAL_TIME = "Waktu Persetujuan Manager"
     LINK_PDF = "Link PDF"
     LINK_PDF_NONSBO = "Link PDF Non-SBO"
+    LINK_PDF_REKAP = "Link PDF Rekapitulasi"
     GRAND_TOTAL = "Grand Total"
     GRAND_TOTAL_NONSBO = "Grand Total Non-SBO"
     ALAMAT = "Alamat"

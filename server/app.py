@@ -14,7 +14,7 @@ from num2words import num2words
 
 import config
 from google_services import GoogleServiceProvider
-from pdf_generator import create_pdf_from_data
+from pdf_generator import create_pdf_from_data, create_recap_pdf
 from spk_generator import create_spk_pdf
 from pengawasan_email_logic import get_email_details, FORM_LINKS
 
@@ -298,15 +298,28 @@ def handle_rab_approval():
             pdf_nonsbo_bytes = create_pdf_from_data(google_provider, row_data, exclude_sbo=True)
             pdf_nonsbo_filename = f"DISETUJUI_RAB_NON-SBO_{jenis_toko}_{row_data.get('Nomor Ulok')}.pdf"
 
+            pdf_recap_bytes = create_recap_pdf(google_provider, row_data)
+            pdf_recap_filename = f"DISETUJUI_REKAP_RAB_{jenis_toko}_{row_data.get('Nomor Ulok')}.pdf"
+
             link_pdf_lengkap = google_provider.upload_file_to_drive(pdf_lengkap_bytes, pdf_lengkap_filename, 'application/pdf', config.PDF_STORAGE_FOLDER_ID)
             link_pdf_nonsbo = google_provider.upload_file_to_drive(pdf_nonsbo_bytes, pdf_nonsbo_filename, 'application/pdf', config.PDF_STORAGE_FOLDER_ID)
+            
+            # KODE TAMBAHAN UNTUK PDF REKAP
+            link_pdf_rekap = google_provider.upload_file_to_drive(
+                pdf_recap_bytes, 
+                pdf_recap_filename, 
+                'application/pdf', 
+                config.PDF_STORAGE_FOLDER_ID
+            )
 
             google_provider.update_cell(row, config.COLUMN_NAMES.LINK_PDF, link_pdf_lengkap)
             google_provider.update_cell(row, config.COLUMN_NAMES.LINK_PDF_NONSBO, link_pdf_nonsbo)
-            
+            google_provider.update_cell(row, config.COLUMN_NAMES.LINK_PDF_REKAP, link_pdf_rekap)
+
             row_data[config.COLUMN_NAMES.LINK_PDF] = link_pdf_lengkap
             row_data[config.COLUMN_NAMES.LINK_PDF_NONSBO] = link_pdf_nonsbo
-            
+            row_data[config.COLUMN_NAMES.LINK_PDF_REKAP] = link_pdf_rekap
+
             google_provider.copy_to_approved_sheet(row_data)
 
             if creator_email:
@@ -322,20 +335,23 @@ def handle_rab_approval():
                 
                 subject = f"[FINAL - DISETUJUI] Pengajuan RAB Proyek {nama_toko}: {jenis_toko}"
                 email_body_html = (f"<p>Pengajuan RAB untuk proyek <b>{jenis_toko}</b> di cabang <b>{cabang}</b> telah disetujui sepenuhnya.</p>"
-                                   f"<p>Dua versi file PDF RAB telah dilampirkan:</p>"
+                                   f"<p>Tiga versi file PDF RAB telah dilampirkan:</p>"
                                    f"<ul>"
                                    f"<li><b>{pdf_lengkap_filename}</b>: Berisi semua item pekerjaan.</li>"
                                    f"<li><b>{pdf_nonsbo_filename}</b>: Hanya berisi item pekerjaan di luar SBO.</li>"
+                                   f"<li><b>{pdf_recap_filename}</b>: Rekapitulasi Total Biaya.</li>"
                                    f"</ul>"
                                    f"<p>Link Google Drive:</p>"
                                    f"<ul>"
                                    f"<li><a href='{link_pdf_lengkap}'>Link PDF Lengkap</a></li>"
                                    f"<li><a href='{link_pdf_nonsbo}'>Link PDF Non-SBO</a></li>"
+                                   f"<li><a href='{link_pdf_rekap}'>Link PDF Rekapitulasi</a></li>"
                                    f"</ul>")
 
                 email_attachments = [
                     (pdf_lengkap_filename, pdf_lengkap_bytes, 'application/pdf'),
-                    (pdf_nonsbo_filename, pdf_nonsbo_bytes, 'application/pdf')
+                    (pdf_nonsbo_filename, pdf_nonsbo_bytes, 'application/pdf'),
+                    (pdf_recap_filename, pdf_recap_bytes, 'application/pdf')
                 ]
                 
                 google_provider.send_email(

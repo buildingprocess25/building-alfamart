@@ -210,6 +210,9 @@ def create_pdf_from_data(google_provider, form_data, exclude_sbo=False):
         tanggal_pengajuan=tanggal_pengajuan_str
     )
 
+    return HTML(string=html_string).write_pdf()
+
+
 # TAMBAHKAN ATAU VERIFIKASI FUNGSI INI:
 def get_approval_details_html(google_provider, approver_email, approval_time_str):
     if not approver_email:

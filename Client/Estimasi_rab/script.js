@@ -253,8 +253,6 @@ const createBoQRow = (category, scope) => {
     return row;
 };
 
-// ... (sisa kode tetap sama) ...
-
 function buildTables(scope, data) {
     const wrapper = scope === 'Sipil' ? sipilTablesWrapper : meTablesWrapper;
     wrapper.innerHTML = '';
@@ -753,6 +751,38 @@ async function initializePage() {
         e.preventDefault();
         handleFormSubmit();
     });
+
+    checkSessionTime();
+    setInterval(checkSessionTime, 300000);
 }
 
 document.addEventListener("DOMContentLoaded", initializePage);
+
+function checkSessionTime() {
+  try {
+    const startHour = 6; 
+    const endHour = 18;
+
+    const now = new Date();
+    const options = { timeZone: "Asia/Jakarta", hour: '2-digit', hour12: false };
+    const currentHour = parseInt(new Intl.DateTimeFormat('en-US', options).format(now));
+
+    if (currentHour < startHour || currentHour >= endHour) {
+      
+      const token = sessionStorage.getItem("authenticated");
+      
+      if (token) {
+        sessionStorage.removeItem("authenticated");
+        sessionStorage.removeItem("loggedInUserEmail");
+        sessionStorage.removeItem("loggedInUserCabang");
+        sessionStorage.removeItem("userRole");
+
+        alert("Sesi Anda telah berakhir karena di luar jam operasional (06:00 - 18:00 WIB).");
+        
+        window.location.href = "/login.html"; 
+      }
+    }
+  } catch (err) {
+    console.error("Gagal menjalankan pengecekan jam sesi:", err);
+  }
+}

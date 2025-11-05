@@ -256,12 +256,44 @@ document.addEventListener('DOMContentLoaded', () => {
 
     form.addEventListener('submit', handleFormSubmit);
 
+    function checkSessionTime() {
+        try {
+            const startHour = 6;  
+            const endHour = 18;
+
+            const now = new Date();
+            const options = { timeZone: "Asia/Jakarta", hour: '2-digit', hour12: false };
+            const currentHour = parseInt(new Intl.DateTimeFormat('en-US', options).format(now));
+
+            if (currentHour < startHour || currentHour >= endHour) {
+            
+            const token = sessionStorage.getItem("loggedInUserEmail"); 
+            
+            if (token) {
+                sessionStorage.removeItem("authenticated");
+                sessionStorage.removeItem("loggedInUserEmail");
+                sessionStorage.removeItem("loggedInUserCabang");
+                sessionStorage.removeItem("userRole");
+
+                alert("Sesi Anda telah berakhir karena di luar jam operasional (06:00 - 18:00 WIB).");
+                
+                window.location.href = "/login.html"; 
+            }
+            }
+        } catch (err) {
+            console.error("Gagal menjalankan pengecekan jam sesi:", err);
+        }
+        }
+
     // --- Initialization ---
     function initializePage() {
         const userCabang = sessionStorage.getItem('loggedInUserCabang');
         populateCabangSelect();
-        setCabangCode(userCabang); // Panggil fungsi ini saat inisialisasi
+        setCabangCode(userCabang);
         fetchApprovedRab();
+
+        checkSessionTime();
+        setInterval(checkSessionTime, 300000);
     }
 
     initializePage();

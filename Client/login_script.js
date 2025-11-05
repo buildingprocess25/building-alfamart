@@ -61,6 +61,28 @@ document.addEventListener('DOMContentLoaded', () => {
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 
+        try {
+            const now = new Date();
+            const options = { timeZone: "Asia/Jakarta", hour: '2-digit', hour12: false };
+            const currentHour = parseInt(new Intl.DateTimeFormat('en-US', options).format(now));
+
+            const startHour = 9; 
+            const endHour = 10; 
+
+            if (currentHour < startHour || currentHour >= endHour) {
+                loginMessage.textContent = 'Login di luar jam operasional. Silakan login antara pukul 06:00 - 18:00 WIB.';
+                loginMessage.className = 'login-message error';
+                loginMessage.style.display = 'block';
+                return;
+            }
+            } catch (err) {
+            console.error("Gagal memvalidasi jam:", err);
+            loginMessage.textContent = 'Gagal memvalidasi jam, silakan coba lagi.';
+            loginMessage.className = 'login-message error';
+            loginMessage.style.display = 'block';
+            return;
+            }
+
         const username = loginForm.username.value;
         const password = passwordInput.value;
 

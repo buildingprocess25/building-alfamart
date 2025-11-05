@@ -66,8 +66,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const options = { timeZone: "Asia/Jakarta", hour: '2-digit', hour12: false };
             const currentHour = parseInt(new Intl.DateTimeFormat('en-US', options).format(now));
 
-            const startHour = 9; 
-            const endHour = 10; 
+            const startHour = 6; 
+            const endHour = 18; 
 
             if (currentHour < startHour || currentHour >= endHour) {
                 loginMessage.textContent = 'Login di luar jam operasional. Silakan login antara pukul 06:00 - 18:00 WIB.';

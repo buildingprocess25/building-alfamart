@@ -120,8 +120,6 @@ def submit_rab():
         )
         item_details = {k: v for k, v in data.items() if k.startswith(item_keys_to_archive)}
         data['Item_Details_JSON'] = json.dumps(item_details)
-
-        pdf_bytes = create_pdf_from_data(google_provider, data, exclude_sbo=False)
         
         jenis_toko = data.get('Proyek', 'N/A')
         nama_toko = data.get('Nama_Toko', data.get('nama_toko', 'N/A'))
@@ -130,11 +128,21 @@ def submit_rab():
         if isinstance(nomor_ulok_raw, str) and len(nomor_ulok_raw) == 12:
             nomor_ulok_formatted = f"{nomor_ulok_raw[:4]}-{nomor_ulok_raw[4:8]}-{nomor_ulok_raw[8:]}"
         
-        pdf_filename = f"RAB_ALFAMART({jenis_toko})_({nomor_ulok_formatted}).pdf"
+        pdf_nonsbo_bytes = create_pdf_from_data(google_provider, data, exclude_sbo=True)
+        pdf_recap_bytes = create_recap_pdf(google_provider, data)
+
+        pdf_nonsbo_filename = f"RAB_NON-SBO_{jenis_toko}_{nomor_ulok_formatted}.pdf"
+        pdf_recap_filename = f"REKAP_RAB_{jenis_toko}_{nomor_ulok_formatted}.pdf"
         
-        pdf_link = google_provider.upload_file_to_drive(pdf_bytes, pdf_filename, 'application/pdf', config.PDF_STORAGE_FOLDER_ID)
-        data[config.COLUMN_NAMES.LINK_PDF] = pdf_link
+        link_pdf_nonsbo = google_provider.upload_file_to_drive(
+            pdf_nonsbo_bytes, pdf_nonsbo_filename, 'application/pdf', config.PDF_STORAGE_FOLDER_ID
+        )
+        link_pdf_rekap = google_provider.upload_file_to_drive(
+            pdf_recap_bytes, pdf_recap_filename, 'application/pdf', config.PDF_STORAGE_FOLDER_ID
+        )
         
+        data[config.COLUMN_NAMES.LINK_PDF_NONSBO] = link_pdf_nonsbo
+        data[config.COLUMN_NAMES.LINK_PDF_REKAP] = link_pdf_rekap
         data[config.COLUMN_NAMES.LOKASI] = nomor_ulok_formatted
         
         new_row_index = google_provider.append_to_sheet(data, config.DATA_ENTRY_SHEET_NAME)
@@ -158,7 +166,10 @@ def submit_rab():
             to=coordinator_emails,
             subject=f"[TAHAP 1: PERLU PERSETUJUAN] RAB Proyek {nama_toko}: {jenis_toko}", 
             html_body=email_html, 
-            attachments=[(pdf_filename, pdf_bytes, 'application/pdf')]
+            attachments=[
+                (pdf_nonsbo_filename, pdf_nonsbo_bytes, 'application/pdf'),
+                (pdf_recap_filename, pdf_recap_bytes, 'application/pdf')
+            ]
         )
         
         return jsonify({"status": "success", "message": "Data successfully submitted and approval email sent."}), 200

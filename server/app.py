@@ -411,7 +411,7 @@ def submit_spk():
         
         start_date = datetime.datetime.fromisoformat(data['Waktu Mulai'])
         duration = int(data['Durasi'])
-        end_date = start_date + timedelta(days=duration - 2)
+        end_date = start_date + timedelta(days=duration - 1)
         data['Waktu Selesai'] = end_date.isoformat()
         
         total_cost = float(data.get('Grand Total', 0))

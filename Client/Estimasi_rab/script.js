@@ -209,24 +209,37 @@ const autoFillPrices = (selectElement) => {
         const setupPriceInput = (input, price, type) => {
             const isKondisional = price === "Kondisional";
 
+            // reset dulu semua state input sebelum kondisi diterapkan
+            input.disabled = false;
+            input.readOnly = false;
+
             if (isKondisional) {
                 input.value = "0";
-                input.classList.add("kondisional-input");
-                input.classList.remove("auto-filled");
-                input.addEventListener("input", handleCurrencyInput);
 
                 if (type === "material") {
-                    input.disabled = true;  // ❗ Material dikunci
+                    // MATERIAL -> tidak bisa edit (disabled ABU-ABU)
+                    input.disabled = true;        // penting agar abu-abu
                     input.readOnly = true;
+                    input.classList.add("auto-filled");
+                    input.classList.remove("kondisional-input");
                 }
 
                 if (type === "upah") {
-                    input.disabled = false; // ✅ Upah tetap bisa diketik
+                    // UPAH -> bisa edit
+                    input.disabled = false;       // pastikan enabled
                     input.readOnly = false;
-                    setTimeout(() => input.focus(), 10); // Auto focus biar nyaman
+                    input.classList.add("kondisional-input");
+                    input.classList.remove("auto-filled");
+
+                    // aktifkan handle input currency
+                    input.addEventListener("input", handleCurrencyInput);
+
+                    // auto-focus ke kolom upah biar UX enak
+                    setTimeout(() => input.focus(), 10);
                 }
 
             } else {
+                // HARGA NORMAL
                 input.value = formatNumberWithSeparators(price);
                 input.disabled = false;
                 input.readOnly = true;
@@ -250,6 +263,7 @@ const autoFillPrices = (selectElement) => {
 
     calculateTotalPrice(selectElement);
 };
+
 
 const createBoQRow = (category, scope) => {
     const row = document.createElement("tr");

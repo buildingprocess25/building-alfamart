@@ -171,7 +171,7 @@ const autoFillPrices = (selectElement) => {
         satuanInput.value = "";
         materialPriceInput.readOnly = true;
         materialPriceInput.disabled = false;
-        upahPriceInput.readOnly = false;
+        upahPriceInput.readOnly = true;
         upahPriceInput.disabled = false;
         calculateTotalPrice(selectElement);
         return;
@@ -209,44 +209,43 @@ const autoFillPrices = (selectElement) => {
         const setupPriceInput = (input, price, type) => {
             const isKondisional = price === "Kondisional";
 
-            // reset dulu semua state input sebelum kondisi diterapkan
+            // RESET dulu semua kondisi
             input.disabled = false;
             input.readOnly = false;
+            input.classList.remove("auto-filled", "kondisional-input");
 
             if (isKondisional) {
                 input.value = "0";
 
                 if (type === "material") {
-                    // MATERIAL -> tidak bisa edit (disabled ABU-ABU)
-                    input.disabled = true;        // penting agar abu-abu
+                    // ❌ MATERIAL -> tetap disabled & abu-abu
+                    input.disabled = true;
                     input.readOnly = true;
                     input.classList.add("auto-filled");
-                    input.classList.remove("kondisional-input");
                 }
 
                 if (type === "upah") {
-                    // UPAH -> bisa edit
-                    input.disabled = false;       // pastikan enabled
+                    // ✅ UPAH -> WAJIB EDITABLE & tidak abu-abu
+                    input.disabled = false;
                     input.readOnly = false;
-                    input.classList.add("kondisional-input");
-                    input.classList.remove("auto-filled");
+                    input.classList.add("kondisional-input"); // class khusus agar terlihat editable
 
-                    // aktifkan handle input currency
+                    // Aktifkan format input rupiah
                     input.addEventListener("input", handleCurrencyInput);
 
-                    // auto-focus ke kolom upah biar UX enak
+                    // Auto focus biar langsung bisa ngetik
                     setTimeout(() => input.focus(), 10);
                 }
 
             } else {
-                // HARGA NORMAL
+                // ✅ Jika harga normal (bukan kondisional)
                 input.value = formatNumberWithSeparators(price);
                 input.disabled = false;
                 input.readOnly = true;
                 input.classList.add("auto-filled");
-                input.classList.remove("kondisional-input");
             }
         };
+
 
         setupPriceInput(materialPriceInput, selectedItem["Harga Material"], "material");
         setupPriceInput(upahPriceInput, selectedItem["Harga Upah"], "upah");

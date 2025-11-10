@@ -145,24 +145,22 @@ const autoFillPrices = (selectElement) => {
     if (!row) return;
 
     const selectedJenisPekerjaan = selectElement.value;
-    
-    if (selectElement.selectedIndex > 0) {
-        selectElement.title = selectElement.options[selectElement.selectedIndex].text;
-    } else {
-        selectElement.title = '';
-    }
-    
+
+    selectElement.title = selectElement.selectedIndex > 0
+        ? selectElement.options[selectElement.selectedIndex].text
+        : "";
+
     const currentCategory = row.dataset.category;
     const currentLingkupPekerjaan = lingkupPekerjaanSelect.value;
-    
+
     const volumeInput = row.querySelector(".volume");
     const materialPriceInput = row.querySelector(".harga-material");
     const upahPriceInput = row.querySelector(".harga-upah");
     const satuanInput = row.querySelector(".satuan");
 
-    // Selalu setel ulang tampilan saat pilihan berubah
+    // Reset UI state
     [volumeInput, materialPriceInput, upahPriceInput, satuanInput].forEach(el => {
-        el.classList.remove('auto-filled', 'kondisional-input');
+        el.classList.remove("auto-filled", "kondisional-input");
     });
 
     if (!selectedJenisPekerjaan) {
@@ -172,59 +170,84 @@ const autoFillPrices = (selectElement) => {
         upahPriceInput.value = "0";
         satuanInput.value = "";
         materialPriceInput.readOnly = true;
+        materialPriceInput.disabled = false;
         upahPriceInput.readOnly = true;
+        upahPriceInput.disabled = false;
         calculateTotalPrice(selectElement);
         return;
     }
 
-    materialPriceInput.removeEventListener('input', handleCurrencyInput);
-    upahPriceInput.removeEventListener('input', handleCurrencyInput);
+    // Remove old listeners
+    materialPriceInput.removeEventListener("input", handleCurrencyInput);
+    upahPriceInput.removeEventListener("input", handleCurrencyInput);
 
     let selectedItem = null;
-    let dataSource = (currentLingkupPekerjaan === "Sipil") ? categorizedPrices.categorizedSipilPrices : categorizedPrices.categorizedMePrices;
+    const dataSource = currentLingkupPekerjaan === "Sipil"
+        ? categorizedPrices.categorizedSipilPrices
+        : categorizedPrices.categorizedMePrices;
+
     if (dataSource && dataSource[currentCategory]) {
-        selectedItem = dataSource[currentCategory].find(item => item["Jenis Pekerjaan"] === selectedJenisPekerjaan);
+        selectedItem = dataSource[currentCategory].find(
+            item => item["Jenis Pekerjaan"] === selectedJenisPekerjaan
+        );
     }
 
     if (selectedItem) {
         satuanInput.value = selectedItem["Satuan"];
-        satuanInput.classList.add('auto-filled');
+        satuanInput.classList.add("auto-filled");
 
+        // Set volume rule
         if (selectedItem["Satuan"] === "Ls") {
             volumeInput.value = "1.00";
             volumeInput.readOnly = true;
-            volumeInput.classList.add('auto-filled');
+            volumeInput.classList.add("auto-filled");
         } else {
             volumeInput.value = "0.00";
             volumeInput.readOnly = false;
-            volumeInput.classList.remove('auto-filled');
         }
 
-        const setupPriceInput = (input, price) => {
-            const isEditable = price === "Kondisional";
-            
-            input.readOnly = !isEditable;
-            input.value = isEditable ? "0" : formatNumberWithSeparators(price);
+        const setupPriceInput = (input, price, type) => {
+            const isKondisional = price === "Kondisional";
 
-            if(isEditable) {
-                input.classList.add('kondisional-input');
-                input.classList.remove('auto-filled');
-                input.addEventListener('input', handleCurrencyInput);
+            if (isKondisional) {
+                input.value = "0";
+                input.classList.add("kondisional-input");
+                input.classList.remove("auto-filled");
+                input.addEventListener("input", handleCurrencyInput);
+
+                if (type === "material") {
+                    input.disabled = true;  // ❗ Material dikunci
+                    input.readOnly = true;
+                }
+
+                if (type === "upah") {
+                    input.disabled = false; // ✅ Upah tetap bisa diketik
+                    input.readOnly = false;
+                    setTimeout(() => input.focus(), 10); // Auto focus biar nyaman
+                }
+
             } else {
-                input.classList.add('auto-filled');
-                input.classList.remove('kondisional-input');
+                input.value = formatNumberWithSeparators(price);
+                input.disabled = false;
+                input.readOnly = true;
+                input.classList.add("auto-filled");
+                input.classList.remove("kondisional-input");
             }
         };
-        setupPriceInput(materialPriceInput, selectedItem["Harga Material"]);
-        setupPriceInput(upahPriceInput, selectedItem["Harga Upah"]);
+
+        setupPriceInput(materialPriceInput, selectedItem["Harga Material"], "material");
+        setupPriceInput(upahPriceInput, selectedItem["Harga Upah"], "upah");
+
     } else {
         volumeInput.value = "0.00";
         volumeInput.readOnly = false;
         materialPriceInput.value = "0";
         upahPriceInput.value = "0";
         satuanInput.value = "";
+        materialPriceInput.disabled = false;
+        upahPriceInput.disabled = false;
     }
-    
+
     calculateTotalPrice(selectElement);
 };
 

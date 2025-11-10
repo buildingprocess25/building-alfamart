@@ -145,22 +145,24 @@ const autoFillPrices = (selectElement) => {
     if (!row) return;
 
     const selectedJenisPekerjaan = selectElement.value;
-
-    selectElement.title = selectElement.selectedIndex > 0
-        ? selectElement.options[selectElement.selectedIndex].text
-        : "";
-
+    
+    if (selectElement.selectedIndex > 0) {
+        selectElement.title = selectElement.options[selectElement.selectedIndex].text;
+    } else {
+        selectElement.title = '';
+    }
+    
     const currentCategory = row.dataset.category;
     const currentLingkupPekerjaan = lingkupPekerjaanSelect.value;
-
+    
     const volumeInput = row.querySelector(".volume");
     const materialPriceInput = row.querySelector(".harga-material");
     const upahPriceInput = row.querySelector(".harga-upah");
     const satuanInput = row.querySelector(".satuan");
 
-    // Reset UI state
+    // Selalu setel ulang tampilan saat pilihan berubah
     [volumeInput, materialPriceInput, upahPriceInput, satuanInput].forEach(el => {
-        el.classList.remove("auto-filled", "kondisional-input");
+        el.classList.remove('auto-filled', 'kondisional-input');
     });
 
     if (!selectedJenisPekerjaan) {
@@ -170,99 +172,68 @@ const autoFillPrices = (selectElement) => {
         upahPriceInput.value = "0";
         satuanInput.value = "";
         materialPriceInput.readOnly = true;
-        materialPriceInput.disabled = false;
         upahPriceInput.readOnly = true;
-        upahPriceInput.disabled = false;
         calculateTotalPrice(selectElement);
         return;
     }
 
-    // Remove old listeners
-    materialPriceInput.removeEventListener("input", handleCurrencyInput);
-    upahPriceInput.removeEventListener("input", handleCurrencyInput);
+    materialPriceInput.removeEventListener('input', handleCurrencyInput);
+    upahPriceInput.removeEventListener('input', handleCurrencyInput);
 
     let selectedItem = null;
-    const dataSource = currentLingkupPekerjaan === "Sipil"
-        ? categorizedPrices.categorizedSipilPrices
-        : categorizedPrices.categorizedMePrices;
-
+    let dataSource = (currentLingkupPekerjaan === "Sipil") ? categorizedPrices.categorizedSipilPrices : categorizedPrices.categorizedMePrices;
     if (dataSource && dataSource[currentCategory]) {
-        selectedItem = dataSource[currentCategory].find(
-            item => item["Jenis Pekerjaan"] === selectedJenisPekerjaan
-        );
+        selectedItem = dataSource[currentCategory].find(item => item["Jenis Pekerjaan"] === selectedJenisPekerjaan);
     }
 
     if (selectedItem) {
         satuanInput.value = selectedItem["Satuan"];
-        satuanInput.classList.add("auto-filled");
+        satuanInput.classList.add('auto-filled');
 
-        // Set volume rule
         if (selectedItem["Satuan"] === "Ls") {
             volumeInput.value = "1.00";
             volumeInput.readOnly = true;
-            volumeInput.classList.add("auto-filled");
+            volumeInput.classList.add('auto-filled');
         } else {
             volumeInput.value = "0.00";
             volumeInput.readOnly = false;
+            volumeInput.classList.remove('auto-filled');
         }
 
-        const setupPriceInput = (input, price, type) => {
+       const setupPriceInput = (input, price) => {
             const isKondisional = price === "Kondisional";
 
-            // RESET dulu semua kondisi
-            input.disabled = false;
-            input.readOnly = false;
-            input.classList.remove("auto-filled", "kondisional-input");
+            // 🔹 Jika input adalah harga material → tetap disable / readonly
+            // 🔹 Jika input adalah harga upah & kondisional → boleh diedit
+            const isMaterial = input.classList.contains("harga-material");
+            const isEditable = isKondisional ? !isMaterial : false;
 
-            if (isKondisional) {
-                input.value = "0";
+            input.readOnly = !isEditable;
+            input.disabled = !isEditable; // biar abu-abu saat readonly
 
-                if (type === "material") {
-                    // ❌ MATERIAL -> tetap disabled & abu-abu
-                    input.disabled = true;
-                    input.readOnly = true;
-                    input.classList.add("auto-filled");
-                }
+            input.value = isKondisional ? "0" : formatNumberWithSeparators(price);
 
-                if (type === "upah") {
-                    // ✅ UPAH -> WAJIB EDITABLE & tidak abu-abu
-                    input.disabled = false;
-                    input.readOnly = false;
-                    input.classList.add("kondisional-input"); // class khusus agar terlihat editable
-
-                    // Aktifkan format input rupiah
-                    input.addEventListener("input", handleCurrencyInput);
-
-                    // Auto focus biar langsung bisa ngetik
-                    setTimeout(() => input.focus(), 10);
-                }
-
+            if (isEditable) {
+                input.classList.add('kondisional-input');
+                input.classList.remove('auto-filled');
+                input.addEventListener('input', handleCurrencyInput);
             } else {
-                // ✅ Jika harga normal (bukan kondisional)
-                input.value = formatNumberWithSeparators(price);
-                input.disabled = false;
-                input.readOnly = true;
-                input.classList.add("auto-filled");
+                input.classList.add('auto-filled');
+                input.classList.remove('kondisional-input');
             }
         };
-
-
-        setupPriceInput(materialPriceInput, selectedItem["Harga Material"], "material");
-        setupPriceInput(upahPriceInput, selectedItem["Harga Upah"], "upah");
-
+        setupPriceInput(materialPriceInput, selectedItem["Harga Material"]);
+        setupPriceInput(upahPriceInput, selectedItem["Harga Upah"]);
     } else {
         volumeInput.value = "0.00";
         volumeInput.readOnly = false;
         materialPriceInput.value = "0";
         upahPriceInput.value = "0";
         satuanInput.value = "";
-        materialPriceInput.disabled = false;
-        upahPriceInput.disabled = false;
     }
-
+    
     calculateTotalPrice(selectElement);
 };
-
 
 const createBoQRow = (category, scope) => {
     const row = document.createElement("tr");

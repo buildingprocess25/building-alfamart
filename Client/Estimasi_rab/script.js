@@ -200,26 +200,27 @@ const autoFillPrices = (selectElement) => {
             volumeInput.classList.remove('auto-filled');
         }
 
-       const setupPriceInput = (input, price) => {
+        const setupPriceInput = (input, price) => {
             const isKondisional = price === "Kondisional";
 
-            // 🔹 Jika input adalah harga material → tetap disable / readonly
-            // 🔹 Jika input adalah harga upah & kondisional → boleh diedit
+            // 🔹 Cek apakah ini input harga material atau harga upah
             const isMaterial = input.classList.contains("harga-material");
-            const isEditable = isKondisional ? !isMaterial : false;
+
+            // ✅ Logic akhir: jika kondisional → hanya upah yang bisa diinput
+            const isEditable = isKondisional && !isMaterial;
 
             input.readOnly = !isEditable;
-            input.disabled = !isEditable; // biar abu-abu saat readonly
+            input.disabled = !isEditable;
 
             input.value = isKondisional ? "0" : formatNumberWithSeparators(price);
 
             if (isEditable) {
-                input.classList.add('kondisional-input');
-                input.classList.remove('auto-filled');
-                input.addEventListener('input', handleCurrencyInput);
+                input.classList.add("kondisional-input");   // Kuning (boleh input)
+                input.classList.remove("auto-filled");
+                input.addEventListener("input", handleCurrencyInput);
             } else {
-                input.classList.add('auto-filled');
-                input.classList.remove('kondisional-input');
+                input.classList.add("auto-filled");         // Abu-abu (readonly)
+                input.classList.remove("kondisional-input");
             }
         };
         setupPriceInput(materialPriceInput, selectedItem["Harga Material"]);

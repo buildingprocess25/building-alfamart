@@ -88,21 +88,51 @@ def submit_rab():
     data = request.get_json()
     if not data:
         return jsonify({"status": "error", "message": "Invalid JSON data"}), 400
-    new_row_index = None
+    
+    new_row_index = None # Variabel untuk menyimpan row index
+    
     try:
         nomor_ulok_raw = data.get(config.COLUMN_NAMES.LOKASI, '')
         lingkup_pekerjaan = data.get(config.COLUMN_NAMES.LINGKUP_PEKERJAAN, '')
         if not nomor_ulok_raw:
              return jsonify({"status": "error", "message": "Nomor Ulok tidak boleh kosong."}), 400
+
+        # --- LOGIKA BARU UNTUK VALIDASI DAN REVISI ---
+        existing_row_index = None
+        existing_status = None
+        data_sheet = None
+        headers = []
+
+        try:
+            data_sheet = google_provider.sheet.worksheet(config.DATA_ENTRY_SHEET_NAME)
+            headers = data_sheet.row_values(1) # Ambil semua header di baris 1
+
+            # Cari index kolom yang relevan
+            try:
+                ulok_col_index = headers.index(config.COLUMN_NAMES.LOKASI) + 1
+                lingkup_col_index = headers.index(config.COLUMN_NAMES.LINGKUP_PEKERJAAN) + 1
+                status_col_index = headers.index(config.COLUMN_NAMES.STATUS) + 1
+            except ValueError as e:
+                raise Exception(f"Kolom penting tidak ditemukan di sheet {config.DATA_ENTRY_SHEET_NAME}: {e}")
+
+            # Cari semua baris yang cocok dengan Nomor Ulok
+            ulok_cells = data_sheet.findall(nomor_ulok_raw, in_column=ulok_col_index)
+            
+            # Loop melalui hasil (jika ada) untuk menemukan lingkup yang cocok
+            for cell in ulok_cells:
+                row_values = data_sheet.row_values(cell.row)
+                if row_values[lingkup_col_index - 1] == lingkup_pekerjaan: # Cek lingkup di baris yg sama
+                    existing_row_index = cell.row
+                    existing_status = row_values[status_col_index - 1]
+                    break # Asumsi hanya ada 1 data unik per ulok+lingkup
         
-        is_revising = google_provider.is_revision(nomor_ulok_raw, data.get('Email_Pembuat'))
-
-        if not is_revising and google_provider.check_ulok_exists(nomor_ulok_raw, lingkup_pekerjaan):
-            return jsonify({
-                "status": "error", 
-                "message": f"Nomor Ulok {nomor_ulok_raw} dengan lingkup {lingkup_pekerjaan} sudah pernah diajukan dan sedang diproses atau sudah disetujui."
-            }), 409
-
+        except Exception as e:
+            traceback.print_exc()
+            return jsonify({"status": "error", "message": f"Gagal memvalidasi Nomor Ulok di Google Sheet: {str(e)}"}), 500
+        
+        # --- AKHIR LOGIKA VALIDASI ---
+        
+        # Siapkan data (Status, Timestamp, PDF, dll)
         WIB = timezone(timedelta(hours=7))
         data[config.COLUMN_NAMES.STATUS] = config.STATUS.WAITING_FOR_COORDINATOR
         data[config.COLUMN_NAMES.TIMESTAMP] = datetime.datetime.now(WIB).isoformat()
@@ -145,8 +175,55 @@ def submit_rab():
         data[config.COLUMN_NAMES.LINK_PDF_REKAP] = link_pdf_rekap
         data[config.COLUMN_NAMES.LOKASI] = nomor_ulok_formatted
         
-        new_row_index = google_provider.append_to_sheet(data, config.DATA_ENTRY_SHEET_NAME)
+        # --- LOGIKA SUBMISI BARU (CREATE / UPDATE / BLOCK) ---
+        submission_message = "Data successfully submitted and approval email sent."
         
+        if existing_row_index is None:
+            # Skenario 3: Pengajuan Baru
+            new_row_index = google_provider.append_to_sheet(data, config.DATA_ENTRY_SHEET_NAME)
+        
+        else:
+            # Skenario 1 & 2: Data Ulok sudah ada
+            if existing_status == config.STATUS.APPROVED:
+                # Skenario 2: Block jika sudah disetujui
+                return jsonify({
+                    "status": "error", 
+                    "message": "pekerjaan anda tidak bisa di submit karena no ulok tersebut sudah pernah disetujui"
+                }), 409
+            
+            elif existing_status in [
+                config.STATUS.WAITING_FOR_COORDINATOR, 
+                config.STATUS.WAITING_FOR_MANAGER, 
+                config.STATUS.REJECTED_BY_COORDINATOR, 
+                config.STATUS.REJECTED_BY_MANAGER
+            ]:
+                # Skenario 1: Replace/Update data (Revisi)
+                try:
+                    # Buat array data baris berdasarkan urutan header
+                    new_row_values = []
+                    for header in headers:
+                        # data.get(header, "") akan mengisi kolom dengan data baru,
+                        # dan mengosongkan kolom (spt persetujuan) yg tidak ada di dict 'data'
+                        new_row_values.append(data.get(header, "")) 
+                    
+                    # Update seluruh baris dalam satu panggilan API
+                    data_sheet.update(f'A{existing_row_index}', [new_row_values], value_input_option='USER_ENTERED')
+                    
+                    new_row_index = existing_row_index # Gunakan row index yang ada untuk email
+                    submission_message = "Data revisi berhasil dikirim dan persetujuan diulang."
+
+                except Exception as e:
+                    traceback.print_exc()
+                    return jsonify({"status": "error", "message": f"Gagal memperbarui data revisi: {str(e)}"}), 500
+            else:
+                # Catch-all untuk status lain (misal: "Dibatalkan", dll)
+                return jsonify({
+                    "status": "error", 
+                    "message": f"Status Ulok '{existing_status}' tidak mengizinkan revisi."
+                }), 400
+
+        # --- AKHIR LOGIKA SUBMISI BARU ---
+
         cabang = data.get('Cabang')
         if not cabang:
              raise Exception("Field 'Cabang' is empty. Cannot find Coordinator.")
@@ -172,11 +249,14 @@ def submit_rab():
             ]
         )
         
-        return jsonify({"status": "success", "message": "Data successfully submitted and approval email sent."}), 200
+        return jsonify({"status": "success", "message": submission_message}), 200
 
     except Exception as e:
-        if new_row_index:
+        # Jika error terjadi SETELAH baris baru dibuat (misal saat kirim email), hapus baris yg baru dibuat.
+        # Ini tidak berlaku untuk revisi (karena kita tidak ingin menghapus baris yg direvisi).
+        if new_row_index and not existing_row_index:
             google_provider.delete_row(config.DATA_ENTRY_SHEET_NAME, new_row_index)
+            
         traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
     

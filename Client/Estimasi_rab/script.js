@@ -388,19 +388,6 @@ function calculateTotalPrice(inputElement) {
     calculateGrandTotal();
 }
 
-const resetLingkupPekerjaan = () => {
-    // Cek jika lingkup punya nilai, baru direset
-    if (lingkupPekerjaanSelect && lingkupPekerjaanSelect.value !== '') {
-        lingkupPekerjaanSelect.value = '';
-        if (sipilTablesWrapper) sipilTablesWrapper.innerHTML = '';
-        if (meTablesWrapper) meTablesWrapper.innerHTML = '';
-        if (sipilTablesWrapper) sipilTablesWrapper.classList.add("hidden");
-        if (meTablesWrapper) meTablesWrapper.classList.add("hidden");
-        if (messageDiv) messageDiv.style.display = 'none'; // Sembunyikan notif lama
-        calculateGrandTotal(); // Hitung ulang total
-    }
-};
-
 const calculateGrandTotal = () => {
     let total = 0;
     document.querySelectorAll(".boq-table-body:not(.hidden) .total-harga").forEach(input => total += parseRupiah(input.value));
@@ -747,76 +734,18 @@ async function initializePage() {
         lingkupPekerjaanSelect.disabled = false;
     }
     
-    document.getElementById('lokasi_cabang').addEventListener('change', () => {
-        updateNomorUlok();
-        resetLingkupPekerjaan(); // PANGGIL FUNGSI RESET DI SINI
-    });
-    document.getElementById('lokasi_tanggal').addEventListener('input', () => {
-        updateNomorUlok();
-        resetLingkupPekerjaan(); // PANGGIL FUNGSI RESET DI SINI
-    });
+    document.getElementById('lokasi_cabang').addEventListener('change', updateNomorUlok);
+    document.getElementById('lokasi_tanggal').addEventListener('input', updateNomorUlok);
     document.getElementById('lokasi_manual').addEventListener('input', updateNomorUlok);
 
-    // GANTI listener 'lokasi_manual' YANG LAMA DENGAN INI
     document.getElementById('lokasi_manual')?.addEventListener('input', function(e) {
-        const fullUlok = document.getElementById('lokasi').value.replace(/-/g, '');
-        
-        // Sembunyikan notif jika ulok belum lengkap
-        if (fullUlok.length !== 12) {
-            messageDiv.style.display = 'none';
-            // submitButton.disabled = false; // DIHAPUS
-            return;
-        }
-        
-        const lingkup = lingkupPekerjaanSelect.value;
-        
-        // Wajibkan pilih lingkup dulu
-        if (!lingkup) {
-            messageDiv.textContent = "Pilih 'Lingkup Pekerjaan' untuk memvalidasi Nomor Ulok.";
-            messageDiv.style.backgroundColor = '#007bff'; // Biru info
-            messageDiv.style.display = 'block';
-            // submitButton.disabled = true; // DIHAPUS
-            return;
-        }
-
-        const fullUlokFormatted = document.getElementById('lokasi').value; // AAAA-BBBB-CCCC
-        const ulokKey = `${fullUlokFormatted}_${lingkup}`; // Kunci gabungan
-
-        // Cek 1: Apakah sudah Disetujui? (BLOCK)
-        if (approvedStoreCodes.includes(ulokKey)) {
-            messageDiv.textContent = `ERROR: Nomor Ulok ${fullUlokFormatted} (${lingkup}) sudah Disetujui. Pengajuan tidak dapat dilanjutkan.`;
-            messageDiv.style.backgroundColor = '#dc3545'; // Merah
-            messageDiv.style.display = 'block';
-            // submitButton.disabled = true; // DIHAPUS
-            return;
-        }
-
-        // Cek 2: Apakah Ditolak? (REVISI)
-        const rejectedData = rejectedSubmissionsList.find(item => 
-            item['Nomor Ulok'].replace(/-/g, '') === fullUlok && 
-            item['Lingkup_Pekerjaan'] === lingkup
-        );
-        if (rejectedData) {
-            messageDiv.textContent = `Nomor Ulok ${fullUlokFormatted} (${lingkup}) ditemukan (Status: ${rejectedData.Status}). Data lama akan dimuat. Anda dapat submit untuk revisi.`;
-            messageDiv.style.backgroundColor = '#ffc107'; // Kuning
-            messageDiv.style.display = 'block';
-            // submitButton.disabled = false; // DIHAPUS
-            populateFormWithHistory(rejectedData); // Auto-fill form
-            return;
-        }
-
-        // Cek 3: Apakah Pending? (BLOCK)
-        if (pendingStoreCodes.includes(ulokKey)) {
-            messageDiv.textContent = `PERINGATAN: Nomor Ulok ${fullUlokFormatted} (${lingkup}) sedang diproses/menunggu persetujuan. Anda TIDAK dapat submit saat ini.`;
-            messageDiv.style.backgroundColor = '#ffc107'; // Kuning warning
-            messageDiv.style.display = 'block';
-            // submitButton.disabled = false; // DIHAPUS
-            return;
-        }
-
-        // Jika Lolos semua (data baru)
-        messageDiv.style.display = 'none';
-        // submitButton.disabled = false; // DIHAPUS
+       const fullUlok = document.getElementById('lokasi').value.replace(/-/g, '');
+       if (fullUlok.length === 12) {
+           const rejectedData = rejectedSubmissionsList.find(item => item['Nomor Ulok'].replace(/-/g, '') === fullUlok);
+           if (rejectedData) {
+               populateFormWithHistory(rejectedData);
+           }
+       }
     });
     
     lingkupPekerjaanSelect.addEventListener("change", () => {

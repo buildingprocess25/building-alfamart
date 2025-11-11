@@ -200,39 +200,52 @@ const autoFillPrices = (selectElement) => {
             volumeInput.classList.remove('auto-filled');
         }
 
-        const setupPriceInput = (input, price) => {
-            const isKondisional = price === "Kondisional";
+        const materialPrice = selectedItem["Harga Material"];
+        const upahPrice = selectedItem["Harga Upah"];
 
-            // cek apakah input adalah material
-            const isMaterial = input.classList.contains("harga-material");
+        const isMaterialKondisional = materialPrice === "Kondisional";
+        const isUpahKondisional = upahPrice === "Kondisional";
 
-            // jika kondisional → hanya upah yang bisa input
-            const isEditable = isKondisional && !isMaterial;
+        // --- 1. Logika untuk Input Harga Material ---
+        if (isMaterialKondisional) {
+            // Jika material "Kondisional", set nilai ke 0 dan readonly
+            materialPriceInput.value = "0";
+            materialPriceInput.readOnly = true;
+            materialPriceInput.classList.add("auto-filled");
+            materialPriceInput.classList.remove("kondisional-input");
+        } else {
+            // Jika material punya harga, isi harga dan buat readonly
+            materialPriceInput.value = formatNumberWithSeparators(materialPrice);
+            materialPriceInput.readOnly = true;
+            materialPriceInput.classList.add("auto-filled");
+            materialPriceInput.classList.remove("kondisional-input");
+        }
 
-            // ✅ gunakan readOnly saja, jangan disabled
-            input.readOnly = !isEditable;
-            input.value = isKondisional ? "0" : formatNumberWithSeparators(price);
+        // --- 2. Logika untuk Input Harga Upah ---
+        // Input upah bisa diedit JIKA material "Kondisional" ATAU upah "Kondisional"
+        if (isMaterialKondisional || isUpahKondisional) {
+            upahPriceInput.value = "0"; // Selalu mulai dari 0 jika bisa diedit
+            upahPriceInput.readOnly = false;
+            upahPriceInput.classList.add("kondisional-input"); // Beri style kuning
+            upahPriceInput.classList.remove("auto-filled");
+            upahPriceInput.addEventListener("input", handleCurrencyInput);
+            upahPriceInput.focus(); // Auto-fokus ke input upah
+        } else {
+            // Jika upah punya harga normal (dan material juga normal)
+            upahPriceInput.value = formatNumberWithSeparators(upahPrice);
+            upahPriceInput.readOnly = true;
+            upahPriceInput.classList.add("auto-filled");
+            upahPriceInput.classList.remove("kondisional-input");
+        }
 
-            if (isEditable) {
-                input.classList.add("kondisional-input");
-                input.classList.remove("auto-filled");
-                input.removeAttribute("disabled");          // pastikan tidak disabled
-                input.addEventListener("input", handleCurrencyInput);
-                input.focus();                               // auto fokus ke upah
-            } else {
-                input.classList.add("auto-filled");
-                input.classList.remove("kondisional-input");
-                input.setAttribute("readonly", true);        // tetap readonly
-                input.removeEventListener("input", handleCurrencyInput);
-            }
-        };
-        setupPriceInput(materialPriceInput, selectedItem["Harga Material"]);
-        setupPriceInput(upahPriceInput, selectedItem["Harga Upah"]);
     } else {
+        // Jika item tidak ditemukan (seharusnya tidak terjadi jika data lengkap)
         volumeInput.value = "0.00";
         volumeInput.readOnly = false;
         materialPriceInput.value = "0";
+        materialPriceInput.readOnly = true;
         upahPriceInput.value = "0";
+        upahPriceInput.readOnly = true;
         satuanInput.value = "";
     }
     

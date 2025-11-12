@@ -35,10 +35,20 @@
 
     <div class="container">
         <form id="spk-form" class="form-container">
-            <label for="nomor_ulok">Nomor Ulok (Pilih RAB yang sudah disetujui):</label>
-            <select name="Nomor Ulok" id="nomor_ulok" required>
-                <option value="">-- Memuat data RAB... --</option>
-            </select>
+<label for="nomor_ulok">Nomor Ulok (Pilih RAB yang sudah disetujui):</label>
+<input
+  type="text"
+  id="nomor_ulok"
+  name="Nomor Ulok"
+  list="ulokList"
+  placeholder="Ketik nomor ulok untuk mencari…"
+  autocomplete="off"
+  required
+/>
+<datalist id="ulokList">
+  <option value="">-- Memuat data RAB... --</option>
+</datalist>
+
 
             <div id="rab-details" style="display:none; margin-top: 1rem; padding: 1rem; background-color: #f4f7f6; border-radius: 8px;">
                 <p><strong>Proyek:</strong> <span id="detail_proyek"></span></p>

@@ -41,15 +41,17 @@
 <style>
   /* Wrapper field ULOK */
   .search-select {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    display: block;         /* stack: search di atas dropdown */
     width: 100%;
+    max-width: 100%;
   }
 
-  /* Input & dropdown */
+  /* Input & dropdown (anti overflow) */
   .search-select .control {
-    flex: 1;
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;     /* ← penting supaya tidak melebar keluar card */
     padding: 0.75rem;
     border: 1px solid #e5e7eb;
     border-radius: 0.5rem;
@@ -57,22 +59,20 @@
     font-size: 0.95rem;
   }
 
-  /* Dropdown sedikit lebih lebar */
-  #nomor_ulok {
-    flex: 1.5;
+  /* Jarak antar input–select */
+  .search-select .control + .control {
+    margin-top: 0.5rem;
   }
 
-  /* Responsif: tumpuk di layar kecil */
-  @media (max-width: 768px) {
-    .search-select {
-      flex-direction: column;
-      align-items: stretch;
-    }
+  /* Responsif: tetap aman di layar kecil */
+  @media (max-width: 640px) {
     .search-select .control {
-      width: 100%;
+      padding: 0.9rem;
+      font-size: 1rem;
     }
   }
 </style>
+
 
 
 <!-- Struktur input pencarian dan dropdown -->

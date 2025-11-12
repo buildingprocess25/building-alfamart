@@ -68,7 +68,7 @@ def create_spk_pdf(google_provider, spk_data):
 
     start_date_obj = datetime.fromisoformat(spk_data.get('Waktu Mulai'))
     duration = int(spk_data.get('Durasi'))
-    end_date_obj = start_date_obj + timedelta(days=duration - 2)
+    end_date_obj = start_date_obj + timedelta(days=duration - 1)
     start_date_formatted = start_date_obj.strftime('%d %B %Y')
     end_date_formatted = end_date_obj.strftime('%d %B %Y')
 

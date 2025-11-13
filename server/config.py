@@ -43,6 +43,8 @@ class COLUMN_NAMES:
     GRAND_TOTAL = "Grand Total"
     GRAND_TOTAL_NONSBO = "Grand Total Non-SBO"
     ALAMAT = "Alamat"
+    ALASAN_PENOLAKAN_RAB = "Alasan Penolakan"
+    ALASAN_PENOLAKAN_SPK = "Alasan Penolakan"
 
 # --- Jabatan & Status ---
 class JABATAN:

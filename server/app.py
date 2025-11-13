@@ -266,6 +266,7 @@ def handle_rab_approval():
                 google_provider.update_cell(row, config.COLUMN_NAMES.MANAGER_APPROVAL_TIME, current_time)
             
             google_provider.update_cell(row, config.COLUMN_NAMES.STATUS, new_status)
+            google_provider.update_cell(row, 'Alasan Penolakan', reason)
             if creator_email:
                 subject = f"[DITOLAK] Pengajuan RAB Proyek {nama_toko}: {jenis_toko}"
                 body = (f"<p>Pengajuan RAB untuk proyek <b>{jenis_toko}</b> telah <b>DITOLAK</b>.</p>"
@@ -583,6 +584,8 @@ def handle_spk_approval():
             new_status = config.STATUS.SPK_REJECTED
             google_provider.update_cell_by_sheet(spk_sheet, row_index, 'Status', new_status)
             
+            google_provider.update_cell_by_sheet(spk_sheet, row_index, 'Alasan Penolakan', reason)
+
             jenis_toko = row_data.get('Jenis_Toko', row_data.get('Proyek', 'N/A'))
             nama_toko = row_data.get('Nama_Toko', row_data.get('nama_toko', 'N/A'))
 

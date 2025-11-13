@@ -561,8 +561,7 @@ def handle_spk_approval():
 
             bm_email = approver
             bbm_manager_email = manager_email
-            kontraktor_list = kontraktor_emails 
-            bbs_list = support_emails
+            kontraktor_list = kontraktor_emails
             
             other_recipients = set()
             if initiator_email: other_recipients.add(initiator_email.strip())
@@ -588,7 +587,6 @@ def handle_spk_approval():
 
             opname_recipients = set()
             opname_recipients.update(kontraktor_list)
-            opname_recipients.update(bbs_list)
             
             if opname_recipients:
                 link_opname = f"<p>Silakan melakukan Opname melalui link berikut: <a href='https://opnamebnm.vercel.app/' target='_blank' rel='noopener noreferrer'>Pengisian Opname</a></p>"

@@ -551,33 +551,60 @@ def handle_spk_approval():
             final_pdf_link = google_provider.upload_file_to_drive(final_pdf_bytes, final_pdf_filename, 'application/pdf', config.PDF_STORAGE_FOLDER_ID)
             google_provider.update_cell_by_sheet(spk_sheet, row_index, 'Link PDF', final_pdf_link)
 
-            email_penerima = set()
-
-            pembuat_spk_email = row_data.get('Dibuat Oleh')
-            if pembuat_spk_email:
-                email_penerima.add(pembuat_spk_email.strip())
-
-            penyetuju_spk_email = approver
-            if penyetuju_spk_email:
-                email_penerima.add(penyetuju_spk_email.strip())
-
             nomor_ulok_spk = row_data.get('Nomor Ulok')
+            cabang = row_data.get('Cabang')
+            
+            manager_email = google_provider.get_email_by_jabatan(cabang, config.JABATAN.MANAGER)
+            kontraktor_emails = google_provider.get_emails_by_jabatan(cabang, config.JABATAN.KONTRAKTOR)
+            support_emails = google_provider.get_emails_by_jabatan(cabang, config.JABATAN.SUPPORT)
+            pembuat_rab_email = google_provider.get_rab_creator_by_ulok(nomor_ulok_spk) if nomor_ulok_spk else None
 
-            if nomor_ulok_spk:
-                pembuat_rab_email = google_provider.get_rab_creator_by_ulok(nomor_ulok_spk)
-                if pembuat_rab_email:
-                    email_penerima.add(pembuat_rab_email.strip())
-
-            penerima_final = list(filter(None, email_penerima))
+            bm_email = approver
+            bbm_manager_email = manager_email
+            kontraktor_list = kontraktor_emails 
+            bbs_list = support_emails
+            
+            other_recipients = set()
+            if initiator_email: other_recipients.add(initiator_email.strip())
+            if pembuat_rab_email: other_recipients.add(pembuat_rab_email.strip())
 
             jenis_toko = row_data.get('Jenis_Toko', row_data.get('Proyek', 'N/A'))
             nama_toko = row_data.get('Nama_Toko', row_data.get('nama_toko', 'N/A'))
+            subject = f"[DISETUJUI] SPK Proyek {nama_toko}: {jenis_toko}"
+            
+            email_attachments = [(final_pdf_filename, final_pdf_bytes, 'application/pdf')]
 
-            if penerima_final:
-                subject=f"[DISETUJUI] SPK Proyek {nama_toko}: {jenis_toko}"
-                body = f"<p>SPK yang Anda ajukan untuk proyek <b>{row_data.get('Proyek')}</b> ({row_data.get('Nomor Ulok')}) telah disetujui oleh Branch Manager.</p><p>Silakan melakukan input PIC pengawasan melalui link berikut: <a href='https://frontend-form-virid.vercel.app/login-input_pic.html' target='_blank' rel='noopener noreferrer'>Input PIC Pengawasan</a><p>Silakan melakukan Opname melalui link berikut: <a href='https://opnamebnm.vercel.app/' target='_blank' rel='noopener noreferrer'>Pengisian Opname</a></p><p>File PDF final terlampir.</p>"
-                google_provider.send_email(to=penerima_final, subject=subject, html_body=body, attachments=[(final_pdf_filename, final_pdf_bytes, 'application/pdf')])
+            body_bm = (f"<p>SPK yang Anda setujui untuk proyek <b>{row_data.get('Proyek')}</b> ({row_data.get('Nomor Ulok')}) telah disetujui sepenuhnya dan final.</p>"
+                       f"<p>File PDF final terlampir.</p>")
+            google_provider.send_email(to=[bm_email], subject=subject, html_body=body_bm, attachments=email_attachments)
 
+            if bbm_manager_email:
+                 link_input_pic = f"<p>Silakan melakukan input PIC pengawasan melalui link berikut: <a href='https://frontend-form-virid.vercel.app/login-input_pic.html' target='_blank' rel='noopener noreferrer'>Input PIC Pengawasan</a></p>"
+                 body_bbm = (f"<p>SPK yang diajukan untuk proyek <b>{row_data.get('Proyek')}</b> ({row_data.get('Nomor Ulok')}) telah disetujui oleh Branch Manager.</p>"
+                             f"{link_input_pic}"
+                             f"<p>File PDF final terlampir.</p>")
+                 google_provider.send_email(to=[bbm_manager_email], subject=subject, html_body=body_bbm, attachments=email_attachments)
+                 other_recipients.discard(bbm_manager_email)
+
+            opname_recipients = set()
+            opname_recipients.update(kontraktor_list)
+            opname_recipients.update(bbs_list)
+            
+            if opname_recipients:
+                link_opname = f"<p>Silakan melakukan Opname melalui link berikut: <a href='https://opnamebnm.vercel.app/' target='_blank' rel='noopener noreferrer'>Pengisian Opname</a></p>"
+                body_opname = (f"<p>SPK untuk proyek <b>{row_data.get('Proyek')}</b> ({row_data.get('Nomor Ulok')}) telah disetujui.</p>"
+                               f"{link_opname}"
+                               f"<p>File PDF final terlampir.</p>")
+                google_provider.send_email(to=list(opname_recipients), subject=subject, html_body=body_opname, attachments=email_attachments)
+                
+                for email in opname_recipients:
+                    other_recipients.discard(email)
+
+            if other_recipients:
+                body_default = (f"<p>SPK yang Anda ajukan untuk proyek <b>{row_data.get('Proyek')}</b> ({row_data.get('Nomor Ulok')}) telah disetujui oleh Branch Manager.</p>"
+                                f"<p>File PDF final terlampir.</p>")
+                google_provider.send_email(to=list(other_recipients), subject=subject, html_body=body_default, attachments=email_attachments)
+            
             return render_template('response_page.html', title='Persetujuan Berhasil', message='Terima kasih. Persetujuan Anda telah dicatat.', logo_url=logo_url)
 
         elif action == 'reject':

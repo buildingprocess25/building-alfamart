@@ -115,14 +115,14 @@ table {
   border-collapse: collapse;
 }
 
-.col-no { width: 35px; text-align: center; }
-.col-jenis-pekerjaan { width: 90px; }
-.col-satuan { width: 15px; }
-.col-volume { width: 7%; }
-.col-harga { width: 13%; }
-.col-total { width: 13%; }
-.col-total-harga { width: 14%; }
-.col-aksi { width: 80px; }
+.col-no { width: 3%; text-align: center; } /* Dikecilkan */
+.col-jenis-pekerjaan { width: 34%; } /* Dilebarkan */
+.col-satuan { width: 4%; } /* Dikecilkan */
+.col-volume { width: 5%; } /* Dikecilkan */
+.col-harga { width: 9%; } /* Harga Satuan (Mat & Upah) */
+.col-total { width: 9%; } /* Total Harga Satuan (Mat & Upah) */
+.col-total-harga { width: 10%; } /* Total Harga (Final) */
+.col-aksi { width: 7%; } /* Dikecilkan */
 
 table th,
 table td {

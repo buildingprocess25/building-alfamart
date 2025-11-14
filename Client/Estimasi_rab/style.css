@@ -115,54 +115,14 @@ table {
   border-collapse: collapse;
 }
 
-/* Perbaikan layout tabel agar jenis pekerjaan tidak menabrak kolom lain */
-
-.col-no {
-    width: 40px !important;
-}
-
-.col-jenis-pekerjaan {
-    width: 35% !important;   /* dari 45% -> 35% */
-    padding: 8px !important;
-}
-
-.col-satuan {
-    width: 60px !important;
-}
-
-.col-volume {
-    width: 60px !important;
-}
-
-.col-harga {
-    width: 90px !important;
-}
-
-.col-total-material,
-.col-total-upah {
-    width: 100px !important;
-}
-
-.col-total-harga {
-    width: 110px !important;
-}
-
-.col-aksi {
-    width: 60px !important;
-}
-
-/* Select2 box supaya tidak melebar berlebihan */
-.select2-container {
-    width: 100% !important;  /* ikut kolom saja */
-}
-
-/* Select dalam kolom jenis pekerjaan */
-table tbody td select.jenis-pekerjaan {
-    width: 100% !important;
-    max-width: 100% !important;
-    text-align: left !important;
-    padding: 6px 8px !important;
-}
+.col-no { width: 35px; text-align: center; }
+.col-jenis-pekerjaan { width: 90px; }
+.col-satuan { width: 15px; }
+.col-volume { width: 7%; }
+.col-harga { width: 13%; }
+.col-total { width: 13%; }
+.col-total-harga { width: 14%; }
+.col-aksi { width: 80px; }
 
 table th,
 table td {

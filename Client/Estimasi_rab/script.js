@@ -637,6 +637,18 @@ function createTableStructure(categoryName, scope) {
 
     const table = document.createElement('table');
     table.innerHTML = `
+        <colgroup>
+            <col class="col-no">
+            <col class="col-jenis-pekerjaan">
+            <col class="col-satuan">
+            <col class="col-volume">
+            <col class="col-harga">
+            <col class="col-harga">
+            <col class="col-total">
+            <col class="col-total">
+            <col class="col-total-harga">
+            <col class="col-aksi">
+        </colgroup>
         <thead>
             <tr>
                 <th rowspan="2">No</th><th rowspan="2">Jenis Pekerjaan</th><th rowspan="2">Satuan</th><th colspan="1">Volume</th><th colspan="2">Harga Satuan (Rp)</th><th colspan="2">Total Harga Satuan (Rp)</th><th colspan="1">Total Harga (Rp)</th><th rowspan="2">Aksi</th>

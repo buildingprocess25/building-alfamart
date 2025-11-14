@@ -119,25 +119,29 @@ const populateJenisPekerjaanOptionsForNewRow = (rowElement) => {
     const category = rowElement.dataset.category;
     const scope = rowElement.dataset.scope;
     const selectEl = rowElement.querySelector(".jenis-pekerjaan");
-
+  
     if (!selectEl) return;
-    
-    const dataSource = (scope === "Sipil") ? categorizedPrices.categorizedSipilPrices : (scope === "ME") ? categorizedPrices.categorizedMePrices : {};
+  
+    const dataSource = (scope === "Sipil") 
+        ? categorizedPrices.categorizedSipilPrices 
+        : categorizedPrices.categorizedMePrices;
+
     const itemsInCategory = dataSource ? (dataSource[category] || []) : [];
+
+    // 🛑 Ambil semua jenis pekerjaan yang sudah terpilih
+    const usedItems = getSelectedJenisPekerjaan(category);
 
     selectEl.innerHTML = '<option value="">-- Pilih Jenis Pekerjaan --</option>';
 
-    if (itemsInCategory.length > 0) {
-        itemsInCategory.forEach(item => {
+    itemsInCategory.forEach(item => {
+        if (!usedItems.includes(item["Jenis Pekerjaan"])) {
+            // Hanya tampilkan item yang BELUM dipilih
             const option = document.createElement("option");
-            option.value = item["Jenis Pekerjaan"];
+            option.value = item["Jenis Pkerjaan"];
             option.textContent = item["Jenis Pekerjaan"];
-            option.title = item["Jenis Pekerjaan"];
             selectEl.appendChild(option);
-        });
-    } else {
-        selectEl.innerHTML = '<option value="">-- Tidak ada item --</option>';
-    }
+        }
+    });
 };
 
 const autoFillPrices = (selectElement) => {
@@ -252,6 +256,12 @@ const autoFillPrices = (selectElement) => {
     calculateTotalPrice(selectElement);
 };
 
+// Setelah user memilih, refresh semua dropdown lain
+document.querySelectorAll(`tbody[data-category="${row.dataset.category}"] .jenis-pekerjaan`).forEach(sel => {
+    if (sel !== selectElement) {
+        populateJenisPekerjaanOptionsForNewRow(sel.closest("tr"));
+    }
+});
 
 function refreshJenisPekerjaanOptions(category) {
     // Kumpulkan semua jenis pekerjaan yang sudah dipilih dalam category ini
@@ -278,6 +288,14 @@ function refreshJenisPekerjaanOptions(category) {
         });
 }
 
+function getSelectedJenisPekerjaan(category) {
+    const selected = [];
+    document.querySelectorAll(`tbody[data-category="${category}"] .jenis-pekerjaan`)
+        .forEach(sel => {
+            if (sel.value) selected.push(sel.value);
+        });
+    return selected;
+}
 
 const createBoQRow = (category, scope) => {
     const row = document.createElement("tr");

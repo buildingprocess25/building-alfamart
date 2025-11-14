@@ -116,13 +116,25 @@ table {
 }
 
 .col-no { width: 35px; text-align: center; }
-.col-jenis-pekerjaan { width: 50%; }
+.col-jenis-pekerjaan { 
+    width: 45% !important;
+}
 .col-satuan { width: 45px; }
 .col-volume { width: 7%; }
 .col-harga { width: 13%; }
 .col-total { width: 13%; }
 .col-total-harga { width: 14%; }
 .col-aksi { width: 80px; }
+
+.select2-container {
+    width: 220px !important;   /* kamu bisa ubah 250/300 sesuai kebutuhan */
+}
+
+table tbody td select.jenis-pekerjaan {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 6px 8px !important;
+}
 
 table th,
 table td {

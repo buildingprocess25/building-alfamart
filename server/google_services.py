@@ -476,6 +476,24 @@ class GoogleServiceProvider:
         except Exception as e:
             print(f"Error getting contractors: {e}")
             raise e
+    
+    def update_row(self, sheet_name, row_index, data_dict):
+        """
+        Update seluruh nilai 1 baris berdasarkan dictionary key=columnName.
+        """
+        sheet = self.sheet.worksheet(sheet_name)
+        headers = sheet.row_values(1)
+
+        # Ubah dictionary menjadi list sesuai urutan kolom
+        updated_row = []
+        for col in headers:
+            updated_row.append(data_dict.get(col, ""))
+
+        # Update seluruh baris sekaligus
+        sheet.update(
+            f"A{row_index}:{chr(64 + len(headers))}{row_index}",
+            [updated_row]
+        )
 
     def get_row_data_by_sheet(self, worksheet, row_index):
         try:

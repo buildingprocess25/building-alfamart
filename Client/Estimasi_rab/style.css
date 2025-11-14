@@ -110,19 +110,20 @@ select[disabled] {
 }
 
 table {
-  table-layout: fixed !important; 
+  table-layout: fixed !important; /* Pastikan ini ada */
   width: 100% !important; 
   border-collapse: collapse;
 }
 
+/* Lebar kolom disesuaikan untuk table-layout: fixed (Total 100%) */
 .col-no { width: 3%; text-align: center; } /* Dikecilkan */
 .col-jenis-pekerjaan { width: 34%; } /* Dilebarkan */
-.col-satuan { width: 4%; } /* Dikecilkan */
-.col-volume { width: 5%; } /* Dikecilkan */
+.col-satuan { width: 4%; text-align: center; } /* Dikecilkan */
+.col-volume { width: 5%; text-align: center; } /* Dikecilkan */
 .col-harga { width: 9%; } /* Harga Satuan (Mat & Upah) */
 .col-total { width: 9%; } /* Total Harga Satuan (Mat & Upah) */
 .col-total-harga { width: 10%; } /* Total Harga (Final) */
-.col-aksi { width: 7%; } /* Dikecilkan */
+.col-aksi { width: 7%; text-align: center; } /* Dikecilkan */
 
 table th,
 table td {

@@ -125,6 +125,15 @@ const populateJenisPekerjaanOptionsForNewRow = (rowElement) => {
     const dataSource = (scope === "Sipil") ? categorizedPrices.categorizedSipilPrices : (scope === "ME") ? categorizedPrices.categorizedMePrices : {};
     const itemsInCategory = dataSource ? (dataSource[category] || []) : [];
 
+    // --- PERBAIKAN DIMULAI ---
+    // 1. Dapatkan semua nilai yang SUDAH DIPILIH di kategori ini
+    const selectedValues = Array.from(
+        document.querySelectorAll(`.boq-table-body[data-category="${category}"] .jenis-pekerjaan`)
+    )
+        .map(sel => sel.value)
+        .filter(v => v !== "");
+    // --- PERBAIKAN SELESAI ---
+
     selectEl.innerHTML = '<option value="">-- Pilih Jenis Pekerjaan --</option>';
 
     if (itemsInCategory.length > 0) {
@@ -133,6 +142,14 @@ const populateJenisPekerjaanOptionsForNewRow = (rowElement) => {
             option.value = item["Jenis Pekerjaan"];
             option.textContent = item["Jenis Pekerjaan"];
             option.title = item["Jenis Pekerjaan"];
+
+            // --- PERBAIKAN DIMULAI ---
+            // 2. Nonaktifkan (disable) opsi jika sudah ada di selectedValues
+            if (selectedValues.includes(item["Jenis Pekerjaan"])) {
+                option.disabled = true;
+            }
+            // --- PERBAIKAN SELESAI ---
+            
             selectEl.appendChild(option);
         });
     } else {
@@ -290,7 +307,7 @@ const createBoQRow = (category, scope) => {
 
     // PERUBAHAN 1: Menggunakan class .col-total dan .col-total-harga yang benar
     row.innerHTML = `<td class="col-no"><span class="row-number"></span></td><td class="col-jenis-pekerjaan"><select class="jenis-pekerjaan form-control" name="Jenis_Pekerjaan_Item" required><option value="">-- Pilih --</option></select></td><td class="col-satuan"><input type="text" class="satuan form-control auto-filled" name="Satuan_Item" required readonly /></td><td class="col-volume"><input type="text" class="volume form-control" name="Volume_Item" value="0.00" inputmode="decimal" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\\..*?)\\..*/g, '$1').replace(/(\\.\\d{2})\\d+/, '$1')" /></td><td class="col-harga"><input type="text" class="harga-material form-control auto-filled" name="Harga_Material_Item" inputmode="numeric" required readonly /></td><td class="col-harga"><input type="text" class="harga-upah form-control auto-filled" name="Harga_Upah_Item" inputmode="numeric" required readonly /></td><td class="col-total"><input type="text" class="total-material form-control auto-filled" disabled /></td><td class="col-total"><input type="text" class="total-upah form-control auto-filled" disabled /></td><td class="col-total-harga"><input type="text" class="total-harga form-control auto-filled" disabled /></td><td class="col-aksi"><button type="button" class="delete-row-btn">Hapus</button></td>`;
-    
+  
     row.querySelector(".volume").addEventListener("input", (e) => calculateTotalPrice(e.target));
 
     // PERUBAHAN 2: Menambahkan refreshJenisPekerjaanOptions saat menghapus

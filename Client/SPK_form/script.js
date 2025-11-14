@@ -245,6 +245,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  async function checkSpkStatus(nomorUlok) {
+    const res = await fetch(`${PYTHON_API_BASE_URL}/api/get_spk_status?ulok=${nomorUlok}`);
+    if (!res.ok) return null;
+    return await res.json(); 
+  }
+
   async function handleFormSubmit(e) {
     e.preventDefault();
     if (!form.checkValidity()) {
@@ -259,62 +265,93 @@ document.addEventListener('DOMContentLoaded', () => {
     const data = Object.fromEntries(formData.entries());
     data["Dibuat Oleh"] = sessionStorage.getItem("loggedInUserEmail");
 
+    // ===== Ambil Nomor Ulok & Lingkup =====
     const ulokFromForm = data["Nomor Ulok"].split(" (")[0];
     const lingkupFromForm = data["Nomor Ulok"].includes("(")
       ? data["Nomor Ulok"].split("(")[1].replace(")", "")
       : null;
 
+    // ===== Ambil Approved RAB untuk isi field SPK =====
     const selectedRab = approvedRabData.find(
       (rab) =>
         rab["Nomor Ulok"] === ulokFromForm &&
         rab["Lingkup_Pekerjaan"] === lingkupFromForm
     );
 
-    if (selectedRab) {
-      data["Nomor Ulok"] = ulokFromForm;
-      data["Proyek"] = selectedRab.Proyek;
-      data["Alamat"] = selectedRab.Alamat;
-      data["Lingkup Pekerjaan"] = selectedRab.Lingkup_Pekerjaan;
-      data["Grand Total"] = selectedRab["Grand Total Non-SBO"];
-      data["Cabang"] = selectedRab.Cabang;
-
-      // TAMBAHAN: Pastikan Nama Toko (dari input hidden) terkirim
-      // data['Nama_Toko'] sudah otomatis ada dari new FormData(form)
-      // Tapi kita tambahkan lagi dari selectedRab untuk JAMINAN datanya benar
-      data["Nama_Toko"] =
-        selectedRab["Nama_Toko"] || selectedRab["nama_toko"] || "N/A";
-
-      const cabangCode =
-        branchToUlokMap[selectedRab.Cabang.toUpperCase()] || selectedRab.Cabang;
-
-      data[
-        "Nomor SPK"
-      ] = `(Otomatis)/PROPNDEV-${cabangCode}/${data.spk_manual_1}/${data.spk_manual_2}`;
-      data[
-        "PAR"
-      ] = `${data.par_manual_1}/PROPNDEV-${cabangCode}-${data.par_manual_2}-${data.par_manual_3}`;
-    } else {
-      showMessage(
-        "Data RAB yang dipilih tidak valid. Silakan pilih ulang.",
-        "error"
-      );
+    if (!selectedRab) {
+      showMessage("Data RAB tidak valid. Silakan pilih ulang.", "error");
       submitButton.disabled = false;
       return;
     }
 
+    // ====== CEK STATUS SPK EXISTING ======
+    let spkStatus = null;
+    try {
+      const res = await fetch(
+        `${PYTHON_API_BASE_URL}/api/get_spk_status?ulok=${ulokFromForm}`
+      );
+      spkStatus = await res.json();
+    } catch (err) {
+      console.error("Gagal cek status SPK:", err);
+    }
+
+    // ====== Aturan pengecekan ======
+    if (spkStatus && spkStatus.Status) {
+      const status = spkStatus.Status;
+
+      if (status === "Menunggu Persetujuan Branch Manager") {
+        showMessage(
+          "SPK untuk Nomor Ulok ini sedang menunggu persetujuan Branch Manager. Tidak bisa mengirim ulang.",
+          "error"
+        );
+        submitButton.disabled = false;
+        return;
+      }
+
+      if (status === "SPK Disetujui") {
+        showMessage(
+          "SPK untuk Nomor Ulok ini sudah disetujui. Tidak bisa membuat SPK baru.",
+          "error"
+        );
+        submitButton.disabled = false;
+        return;
+      }
+
+      if (status === "SPK Ditolak") {
+        // MODE REVISI
+        data["Revisi"] = "YES";
+        data["RowIndex"] = spkStatus.RowIndex;
+      }
+    }
+
+    // ====== Isi Data SPK (tetap sama) ======
+    data["Nomor Ulok"] = ulokFromForm;
+    data["Proyek"] = selectedRab.Proyek;
+    data["Alamat"] = selectedRab.Alamat;
+    data["Lingkup Pekerjaan"] = selectedRab.Lingkup_Pekerjaan;
+    data["Grand Total"] = selectedRab["Grand Total Non-SBO"];
+    data["Cabang"] = selectedRab.Cabang;
+    data["Nama_Toko"] =
+      selectedRab["Nama_Toko"] || selectedRab["nama_toko"] || "N/A";
+
+    const cabangCode =
+      branchToUlokMap[selectedRab.Cabang.toUpperCase()] || selectedRab.Cabang;
+
+    data["Nomor SPK"] = `(Otomatis)/PROPNDEV-${cabangCode}/${data.spk_manual_1}/${data.spk_manual_2}`;
+    data["PAR"] = `${data.par_manual_1}/PROPNDEV-${cabangCode}-${data.par_manual_2}-${data.par_manual_3}`;
+
+    // ====== Submit ke Backend ======
     try {
       const response = await fetch(`${PYTHON_API_BASE_URL}/api/submit_spk`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
+
       const result = await response.json();
 
       if (response.ok && result.status === "success") {
-        showMessage(
-          "SPK berhasil dikirim! Halaman akan dimuat ulang.",
-          "success"
-        );
+        showMessage("SPK berhasil dikirim!", "success");
         form.reset();
         rabDetailsDiv.style.display = "none";
         setTimeout(() => window.location.reload(), 2000);

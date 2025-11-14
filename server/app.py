@@ -399,24 +399,51 @@ def get_kontraktor():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/get_spk_status', methods=['GET'])
+def get_spk_status():
+    ulok = request.args.get('ulok')
+    if not ulok:
+        return jsonify({"error": "Parameter ulok kosong"}), 400
+
+    spk_sheet = google_provider.sheet.worksheet(config.SPK_DATA_SHEET_NAME)
+    records = spk_sheet.get_all_records()
+
+    for i, row in enumerate(records, start=2):  # row 2 = data pertama
+        if str(row.get("Nomor Ulok", "")).strip() == str(ulok).strip():
+            return jsonify({
+                "Status": row.get("Status"),
+                "RowIndex": i,
+                "Data": row
+            }), 200
+
+    return jsonify(None), 200
+
 @app.route('/api/submit_spk', methods=['POST'])
 def submit_spk():
     data = request.get_json()
     if not data:
         return jsonify({"status": "error", "message": "Invalid JSON data"}), 400
-    
-    new_row_index = None
+
+    row_index_for_update = data.get("RowIndex")  # Jika revisi
+    is_revision = data.get("Revisi") == "YES"
+
+    new_row_index = None  # Untuk mode tambah baris
+
     try:
         WIB = timezone(timedelta(hours=7))
         now = datetime.datetime.now(WIB)
+
+        # Timestamp & status baru (selalu reset saat submit)
         data['Timestamp'] = now.isoformat()
         data['Status'] = config.STATUS.WAITING_FOR_BM_APPROVAL
-        
+
+        # ---- PERHITUNGAN DURASI ----
         start_date = datetime.datetime.fromisoformat(data['Waktu Mulai'])
         duration = int(data['Durasi'])
         end_date = start_date + timedelta(days=duration - 1)
         data['Waktu Selesai'] = end_date.isoformat()
-        
+
+        # ---- HITUNG BIAYA ----
         total_cost = float(data.get('Grand Total', 0))
         terbilang_text = num2words(total_cost, lang='id').title()
         data['Biaya'] = total_cost
@@ -425,53 +452,85 @@ def submit_spk():
         cabang = data.get('Cabang')
         nama_toko = data.get('Nama_Toko', data.get('nama_toko', 'N/A'))
         jenis_toko = data.get('Jenis_Toko', data.get('Proyek', 'N/A'))
-        
-        spk_sequence = google_provider.get_next_spk_sequence(cabang, now.year, now.month)
+
+        # ---- GENERATE NOMOR SPK ----
         spk_manual_1 = data.get('spk_manual_1', '')
         spk_manual_2 = data.get('spk_manual_2', '')
         cabang_code = google_provider.get_cabang_code(cabang)
-        
-        full_spk_number = f"{spk_sequence:03d}/PROPNDEV-{cabang_code}/{spk_manual_1}/{spk_manual_2}"
-        data['Nomor SPK'] = full_spk_number
 
+        # Sequence hanya dipakai saat SPK BARU
+        if not is_revision:
+            spk_sequence = google_provider.get_next_spk_sequence(cabang, now.year, now.month)
+            full_spk_number = f"{spk_sequence:03d}/PROPNDEV-{cabang_code}/{spk_manual_1}/{spk_manual_2}"
+        else:
+            # Untuk revisi → nomor SPK lama dipertahankan
+            full_spk_number = data.get("Nomor SPK")
+
+        data['Nomor SPK'] = full_spk_number
         data['PAR'] = data.get('PAR', '')
 
+        # ---- BUAT PDF BARU ----
         pdf_bytes = create_spk_pdf(google_provider, data)
         pdf_filename = f"SPK_{data.get('Proyek')}_{data.get('Nomor Ulok')}.pdf"
-        
-        pdf_link = google_provider.upload_file_to_drive(pdf_bytes, pdf_filename, 'application/pdf', config.PDF_STORAGE_FOLDER_ID)
-        data['Link PDF'] = pdf_link
-        
-        new_row_index = google_provider.append_to_sheet(data, config.SPK_DATA_SHEET_NAME)
 
-        branch_manager_email = google_provider.get_email_by_jabatan(cabang, config.JABATAN.BRANCH_MANAGER)
+        pdf_link = google_provider.upload_file_to_drive(
+            pdf_bytes, pdf_filename, 'application/pdf', config.PDF_STORAGE_FOLDER_ID
+        )
+        data['Link PDF'] = pdf_link
+
+        # ==============================================
+        #  MODE REVISI (UPDATE baris lama)
+        # ==============================================
+        if is_revision and row_index_for_update:
+            google_provider.update_row(
+                config.SPK_DATA_SHEET_NAME,
+                int(row_index_for_update),
+                data
+            )
+            row_to_notify = int(row_index_for_update)
+        else:
+            # ==============================================
+            #  MODE NORMAL (TAMBAH BARIS BARU)
+            # ==============================================
+            new_row_index = google_provider.append_to_sheet(data, config.SPK_DATA_SHEET_NAME)
+            row_to_notify = new_row_index
+
+        # ---- Kirim Email ke Branch Manager ----
+        branch_manager_email = google_provider.get_email_by_jabatan(
+            cabang, config.JABATAN.BRANCH_MANAGER
+        )
         if not branch_manager_email:
             raise Exception(f"Branch Manager email for branch '{cabang}' not found.")
 
         base_url = "https://building-alfamart.onrender.com"
-        approval_url = f"{base_url}/api/handle_spk_approval?action=approve&row={new_row_index}&approver={branch_manager_email}"
-        rejection_url = f"{base_url}/api/reject_form/spk?row={new_row_index}&approver={branch_manager_email}"
+        approval_url = f"{base_url}/api/handle_spk_approval?action=approve&row={row_to_notify}&approver={branch_manager_email}"
+        rejection_url = f"{base_url}/api/reject_form/spk?row={row_to_notify}&approver={branch_manager_email}"
 
-        email_html = render_template('email_template.html', 
-                                     level='Branch Manager', 
-                                     form_data=data, 
-                                     approval_url=approval_url, 
-                                     rejection_url=rejection_url)
-        
+        email_html = render_template(
+            'email_template.html',
+            level='Branch Manager',
+            form_data=data,
+            approval_url=approval_url,
+            rejection_url=rejection_url
+        )
+
         google_provider.send_email(
-            to=branch_manager_email, 
+            to=branch_manager_email,
             subject=f"[PERLU PERSETUJUAN BM] SPK Proyek {nama_toko}: {jenis_toko}",
-            html_body=email_html, 
+            html_body=email_html,
             attachments=[(pdf_filename, pdf_bytes, 'application/pdf')]
         )
-        
+
         return jsonify({"status": "success", "message": "SPK successfully submitted for approval."}), 200
 
     except Exception as e:
+        # Jika submit baris baru gagal, hapus row
         if new_row_index:
             google_provider.delete_row(config.SPK_DATA_SHEET_NAME, new_row_index)
+
         traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
+
     
 @app.route('/api/reject_form/spk', methods=['GET'])
 def reject_form_spk():

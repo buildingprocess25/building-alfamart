@@ -252,6 +252,33 @@ const autoFillPrices = (selectElement) => {
     calculateTotalPrice(selectElement);
 };
 
+
+function refreshJenisPekerjaanOptions(category) {
+    // Kumpulkan semua jenis pekerjaan yang sudah dipilih dalam category ini
+    const selectedValues = Array.from(
+        document.querySelectorAll(`.boq-table-body[data-category="${category}"] .jenis-pekerjaan`)
+    )
+        .map(sel => sel.value)
+        .filter(v => v !== "");
+
+    // Loop semua select di kategori tersebut
+    document.querySelectorAll(`.boq-table-body[data-category="${category}"] .jenis-pekerjaan`)
+        .forEach(select => {
+            const currentValue = select.value;
+
+            Array.from(select.options).forEach(opt => {
+                if (opt.value === "") return;
+
+                if (opt.value !== currentValue && selectedValues.includes(opt.value)) {
+                    opt.style.display = "none";   // sembunyikan
+                } else {
+                    opt.style.display = "block";  // tampilkan lagi
+                }
+            });
+        });
+}
+
+
 const createBoQRow = (category, scope) => {
     const row = document.createElement("tr");
     row.classList.add("boq-item-row");
@@ -268,8 +295,13 @@ const createBoQRow = (category, scope) => {
 
     const jenisPekerjaanSelect = row.querySelector('.jenis-pekerjaan');
     
-    $(jenisPekerjaanSelect).on('change', function(e) {
+        $(jenisPekerjaanSelect).on('change', function (e) {
         autoFillPrices(e.target);
+
+        // Tambahan
+        const row = e.target.closest("tr");
+        const category = row.dataset.category;
+        refreshJenisPekerjaanOptions(category);
     });
     
     initializeSelect2(jenisPekerjaanSelect); 

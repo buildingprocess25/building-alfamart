@@ -116,7 +116,7 @@ table {
 }
 
 .col-no { width: 35px; text-align: center; }
-.col-jenis-pekerjaan { width: 30%; }
+.col-jenis-pekerjaan { width: 50%; }
 .col-satuan { width: 45px; }
 .col-volume { width: 7%; }
 .col-harga { width: 13%; }

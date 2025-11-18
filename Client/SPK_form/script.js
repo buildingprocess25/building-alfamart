@@ -329,7 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
     data["Proyek"] = selectedRab.Proyek;
     data["Alamat"] = selectedRab.Alamat;
     data["Lingkup Pekerjaan"] = selectedRab.Lingkup_Pekerjaan;
-    data["Grand Total"] = selectedRab["Grand Total Non-SBO"];
+    data["Grand Total"] = selectedRab["Grand Total Final"];
     data["Cabang"] = selectedRab.Cabang;
     data["Nama_Toko"] =
       selectedRab["Nama_Toko"] || selectedRab["nama_toko"] || "N/A";
@@ -400,7 +400,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById("detail_lingkup").textContent =
         selectedRab.Lingkup_Pekerjaan || "N/A";
       document.getElementById("detail_total").textContent = formatRupiah(
-        selectedRab["Grand Total Non-SBO"] || 0
+        selectedRab["Grand Total Final"] || 0
       );
 
       rabDetailsDiv.style.display = "block";

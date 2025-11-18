@@ -88,95 +88,184 @@ def submit_rab():
     data = request.get_json()
     if not data:
         return jsonify({"status": "error", "message": "Invalid JSON data"}), 400
+
     new_row_index = None
     try:
         nomor_ulok_raw = data.get(config.COLUMN_NAMES.LOKASI, '')
         lingkup_pekerjaan = data.get(config.COLUMN_NAMES.LINGKUP_PEKERJAAN, '')
+
         if not nomor_ulok_raw:
-             return jsonify({"status": "error", "message": "Nomor Ulok tidak boleh kosong."}), 400
-        
-        is_revising = google_provider.is_revision(nomor_ulok_raw, data.get('Email_Pembuat'))
+            return jsonify({
+                "status": "error",
+                "message": "Nomor Ulok tidak boleh kosong."
+            }), 400
+
+        # Cek revisi / duplikasi
+        is_revising = google_provider.is_revision(
+            nomor_ulok_raw,
+            data.get('Email_Pembuat')
+        )
 
         if not is_revising and google_provider.check_ulok_exists(nomor_ulok_raw, lingkup_pekerjaan):
             return jsonify({
-                "status": "error", 
-                "message": f"Nomor Ulok {nomor_ulok_raw} dengan lingkup {lingkup_pekerjaan} sudah pernah diajukan dan sedang diproses atau sudah disetujui."
+                "status": "error",
+                "message": (
+                    f"Nomor Ulok {nomor_ulok_raw} dengan lingkup {lingkup_pekerjaan} "
+                    "sudah pernah diajukan dan sedang diproses atau sudah disetujui."
+                )
             }), 409
 
+        # Set status awal & timestamp
         WIB = timezone(timedelta(hours=7))
         data[config.COLUMN_NAMES.STATUS] = config.STATUS.WAITING_FOR_COORDINATOR
         data[config.COLUMN_NAMES.TIMESTAMP] = datetime.datetime.now(WIB).isoformat()
 
-        total_non_sbo = 0
+        # --- 1) HITUNG GRAND TOTAL NON-SBO (sudah ada) ---
+        total_non_sbo = 0.0
         for i in range(1, 201):
-            if data.get(f'Kategori_Pekerjaan_{i}') != 'PEKERJAAN SBO' and data.get(f'Total_Harga_Item_{i}'):
-                total_non_sbo += float(data.get(f'Total_Harga_Item_{i}', 0))
+            kategori = data.get(f'Kategori_Pekerjaan_{i}')
+            total_item_str = data.get(f'Total_Harga_Item_{i}')
+            if kategori and kategori != 'PEKERJAAN SBO' and total_item_str:
+                try:
+                    total_non_sbo += float(total_item_str)
+                except ValueError:
+                    pass
         data[config.COLUMN_NAMES.GRAND_TOTAL_NONSBO] = total_non_sbo
 
+        # --- 2) HITUNG GRAND TOTAL (SEMUA ITEM, TERMASUK SBO) ---
+        total_semua_item = 0.0
+        for i in range(1, 201):
+            total_item_str = data.get(f'Total_Harga_Item_{i}')
+            if total_item_str:
+                try:
+                    total_semua_item += float(total_item_str)
+                except ValueError:
+                    pass
+
+        # Simpan "data lama" Grand Total (sebelum pembulatan & PPN)
+        data[config.COLUMN_NAMES.GRAND_TOTAL] = total_semua_item
+
+        # --- 3) HITUNG GRAND TOTAL FINAL (UNTUK SPK) ---
+        #   - dibulatkan ke bawah kelipatan 10.000
+        #   - + PPN 11%
+        pembulatan = (total_semua_item // 10000) * 10000  # kelipatan 10.000
+        ppn = pembulatan * 0.11
+        final_grand_total = pembulatan + ppn
+
+        # Simpan ke kolom baru "Grand Total Final"
+        data[config.COLUMN_NAMES.GRAND_TOTAL_FINAL] = final_grand_total
+
+        # --- 4) ARSIPKAN DETAIL ITEM KE JSON ---
         item_keys_to_archive = (
-            'Kategori_Pekerjaan_', 'Jenis_Pekerjaan_', 'Satuan_Item_', 
+            'Kategori_Pekerjaan_', 'Jenis_Pekerjaan_', 'Satuan_Item_',
             'Volume_Item_', 'Harga_Material_Item_', 'Harga_Upah_Item_',
             'Total_Material_Item_', 'Total_Upah_Item_', 'Total_Harga_Item_'
         )
-        item_details = {k: v for k, v in data.items() if k.startswith(item_keys_to_archive)}
+        item_details = {
+            k: v for k, v in data.items()
+            if k.startswith(item_keys_to_archive)
+        }
         data['Item_Details_JSON'] = json.dumps(item_details)
-        
+
         jenis_toko = data.get('Proyek', 'N/A')
         nama_toko = data.get('Nama_Toko', data.get('nama_toko', 'N/A'))
-        
+
         nomor_ulok_formatted = nomor_ulok_raw
         if isinstance(nomor_ulok_raw, str) and len(nomor_ulok_raw) == 12:
-            nomor_ulok_formatted = f"{nomor_ulok_raw[:4]}-{nomor_ulok_raw[4:8]}-{nomor_ulok_raw[8:]}"
-        
-        pdf_nonsbo_bytes = create_pdf_from_data(google_provider, data, exclude_sbo=True)
+            nomor_ulok_formatted = (
+                f"{nomor_ulok_raw[:4]}-"
+                f"{nomor_ulok_raw[4:8]}-"
+                f"{nomor_ulok_raw[8:]}"
+            )
+
+        # --- 5) GENERATE PDF (NON-SBO & REKAP) ---
+        pdf_nonsbo_bytes = create_pdf_from_data(
+            google_provider, data, exclude_sbo=True
+        )
         pdf_recap_bytes = create_recap_pdf(google_provider, data)
 
         pdf_nonsbo_filename = f"RAB_NON-SBO_{jenis_toko}_{nomor_ulok_formatted}.pdf"
         pdf_recap_filename = f"REKAP_RAB_{jenis_toko}_{nomor_ulok_formatted}.pdf"
-        
+
         link_pdf_nonsbo = google_provider.upload_file_to_drive(
-            pdf_nonsbo_bytes, pdf_nonsbo_filename, 'application/pdf', config.PDF_STORAGE_FOLDER_ID
+            pdf_nonsbo_bytes,
+            pdf_nonsbo_filename,
+            'application/pdf',
+            config.PDF_STORAGE_FOLDER_ID
         )
         link_pdf_rekap = google_provider.upload_file_to_drive(
-            pdf_recap_bytes, pdf_recap_filename, 'application/pdf', config.PDF_STORAGE_FOLDER_ID
+            pdf_recap_bytes,
+            pdf_recap_filename,
+            'application/pdf',
+            config.PDF_STORAGE_FOLDER_ID
         )
-        
+
         data[config.COLUMN_NAMES.LINK_PDF_NONSBO] = link_pdf_nonsbo
         data[config.COLUMN_NAMES.LINK_PDF_REKAP] = link_pdf_rekap
         data[config.COLUMN_NAMES.LOKASI] = nomor_ulok_formatted
-        
-        new_row_index = google_provider.append_to_sheet(data, config.DATA_ENTRY_SHEET_NAME)
-        
+
+        # --- 6) SIMPAN KE SHEET ---
+        new_row_index = google_provider.append_to_sheet(
+            data,
+            config.DATA_ENTRY_SHEET_NAME
+        )
+
+        # --- 7) KIRIM EMAIL KE KOORDINATOR ---
         cabang = data.get('Cabang')
         if not cabang:
-             raise Exception("Field 'Cabang' is empty. Cannot find Coordinator.")
+            raise Exception("Field 'Cabang' is empty. Cannot find Coordinator.")
 
-        coordinator_emails = google_provider.get_emails_by_jabatan(cabang, config.JABATAN.KOORDINATOR)
+        coordinator_emails = google_provider.get_emails_by_jabatan(
+            cabang,
+            config.JABATAN.KOORDINATOR
+        )
         if not coordinator_emails:
-            raise Exception(f"Tidak ada email Koordinator yang ditemukan untuk cabang '{cabang}'.")
+            raise Exception(
+                f"Tidak ada email Koordinator yang ditemukan untuk cabang '{cabang}'."
+            )
 
         base_url = "https://building-alfamart.onrender.com"
         approver_for_link = coordinator_emails[0]
-        approval_url = f"{base_url}/api/handle_rab_approval?action=approve&row={new_row_index}&level=coordinator&approver={approver_for_link}"
-        rejection_url = f"{base_url}/api/reject_form/rab?row={new_row_index}&level=coordinator&approver={approver_for_link}"
-        
-        email_html = render_template('email_template.html', level='Koordinator', form_data=data, approval_url=approval_url, rejection_url=rejection_url)
-        
+        approval_url = (
+            f"{base_url}/api/handle_rab_approval"
+            f"?action=approve&row={new_row_index}"
+            f"&level=coordinator&approver={approver_for_link}"
+        )
+        rejection_url = (
+            f"{base_url}/api/reject_form/rab"
+            f"?row={new_row_index}&level=coordinator"
+            f"&approver={approver_for_link}"
+        )
+
+        email_html = render_template(
+            'email_template.html',
+            level='Koordinator',
+            form_data=data,
+            approval_url=approval_url,
+            rejection_url=rejection_url
+        )
+
         google_provider.send_email(
             to=coordinator_emails,
-            subject=f"[TAHAP 1: PERLU PERSETUJUAN] RAB Proyek {nama_toko}: {jenis_toko}", 
-            html_body=email_html, 
+            subject=f"[TAHAP 1: PERLU PERSETUJUAN] RAB Proyek {nama_toko}: {jenis_toko}",
+            html_body=email_html,
             attachments=[
                 (pdf_nonsbo_filename, pdf_nonsbo_bytes, 'application/pdf'),
                 (pdf_recap_filename, pdf_recap_bytes, 'application/pdf')
             ]
         )
-        
-        return jsonify({"status": "success", "message": "Data successfully submitted and approval email sent."}), 200
+
+        return jsonify({
+            "status": "success",
+            "message": "Data successfully submitted and approval email sent."
+        }), 200
 
     except Exception as e:
         if new_row_index:
-            google_provider.delete_row(config.DATA_ENTRY_SHEET_NAME, new_row_index)
+            google_provider.delete_row(
+                config.DATA_ENTRY_SHEET_NAME,
+                new_row_index
+            )
         traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
     

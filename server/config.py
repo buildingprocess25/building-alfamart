@@ -45,6 +45,7 @@ class COLUMN_NAMES:
     ALAMAT = "Alamat"
     ALASAN_PENOLAKAN_RAB = "Alasan Penolakan"
     ALASAN_PENOLAKAN_SPK = "Alasan Penolakan"
+    GRAND_TOTAL_FINAL = "Grand Total Final"
 
 # --- Jabatan & Status ---
 class JABATAN:

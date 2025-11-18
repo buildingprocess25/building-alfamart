@@ -286,22 +286,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ====== CEK STATUS SPK EXISTING ======
     let spkStatus = null;
+
     try {
+      // 🔥 Kirim ULok + Lingkup ke backend
       const res = await fetch(
-        `${PYTHON_API_BASE_URL}/api/get_spk_status?ulok=${ulokFromForm}`
+        `${PYTHON_API_BASE_URL}/api/get_spk_status?ulok=${encodeURIComponent(
+          ulokFromForm
+        )}&lingkup=${encodeURIComponent(lingkupFromForm)}`
       );
+
       spkStatus = await res.json();
     } catch (err) {
       console.error("Gagal cek status SPK:", err);
     }
 
-    // ====== Aturan pengecekan ======
+    // ====== Aturan Pengecekan ======
     if (spkStatus && spkStatus.Status) {
       const status = spkStatus.Status;
 
       if (status === "Menunggu Persetujuan Branch Manager") {
         showMessage(
-          "SPK untuk Nomor Ulok ini sedang menunggu persetujuan Branch Manager. Tidak bisa mengirim ulang.",
+          "SPK untuk kombinasi Nomor Ulok & Lingkup ini sedang menunggu persetujuan Branch Manager. Tidak bisa mengirim ulang.",
           "error"
         );
         submitButton.disabled = false;
@@ -310,7 +315,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (status === "SPK Disetujui") {
         showMessage(
-          "SPK untuk Nomor Ulok ini sudah disetujui. Tidak bisa membuat SPK baru.",
+          "SPK untuk kombinasi Nomor Ulok & Lingkup ini sudah disetujui. Tidak bisa membuat SPK baru.",
           "error"
         );
         submitButton.disabled = false;

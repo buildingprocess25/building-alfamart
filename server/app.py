@@ -491,20 +491,33 @@ def get_kontraktor():
 @app.route('/api/get_spk_status', methods=['GET'])
 def get_spk_status():
     ulok = request.args.get('ulok')
+    lingkup = request.args.get('lingkup')  # 🔥 tambahan baru
+
     if not ulok:
         return jsonify({"error": "Parameter ulok kosong"}), 400
+
+    if not lingkup:
+        return jsonify({"error": "Parameter lingkup kosong"}), 400
 
     spk_sheet = google_provider.sheet.worksheet(config.SPK_DATA_SHEET_NAME)
     records = spk_sheet.get_all_records()
 
+    ulok = str(ulok).strip()
+    lingkup = str(lingkup).strip().lower()
+
     for i, row in enumerate(records, start=2):  # row 2 = data pertama
-        if str(row.get("Nomor Ulok", "")).strip() == str(ulok).strip():
+        row_ulok = str(row.get("Nomor Ulok", "")).strip()
+        row_lingkup = str(row.get("Lingkup Pekerjaan", "")).strip().lower()
+
+        # 🔥 Perbaikan utama: cek ULOK + Lingkup Pekerjaan
+        if row_ulok == ulok and row_lingkup == lingkup:
             return jsonify({
                 "Status": row.get("Status"),
                 "RowIndex": i,
                 "Data": row
             }), 200
 
+    # Tidak ada SPK untuk kombinasi ULok + Lingkup → boleh submit
     return jsonify(None), 200
 
 @app.route('/api/submit_spk', methods=['POST'])

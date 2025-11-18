@@ -9,8 +9,12 @@
 </head>
 <body>
     <p>Yth. Bapak/Ibu {{ level }},</p>
+   {% set label = "RAB" if doc_type == "RAB" else "SPK" %}
     <p>
-        Dokumen RAB untuk proyek <strong>{{ form_data.Proyek }}</strong> dengan Nomor Ulok <strong>{{ form_data['Nomor Ulok'] }}</strong> memerlukan tinjauan dan persetujuan Anda.
+        Dokumen {{ label }} untuk proyek 
+        <strong>{{ form_data.Proyek }}</strong> 
+        dengan Nomor Ulok <strong>{{ form_data['Nomor Ulok'] }}</strong> 
+        memerlukan tinjauan dan persetujuan Anda.
     </p>
     {% if additional_info %}
     <p style="font-style: italic;">{{ additional_info | safe }}</p>

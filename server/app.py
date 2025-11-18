@@ -239,6 +239,7 @@ def submit_rab():
 
         email_html = render_template(
             'email_template.html',
+            doc_type="RAB",
             level='Koordinator',
             form_data=data,
             approval_url=approval_url,
@@ -380,7 +381,7 @@ def handle_rab_approval():
                 link_pic = ("Silakan buat SPK melalui link berikut: "
                             "<a href='https://building-alfamart.vercel.app/login.html' "
                             "target='_blank' rel='noopener noreferrer'>Buat SPK</a>")
-                email_html_manager = render_template('email_template.html', level='Manajer', form_data=row_data, approval_url=approval_url_manager, rejection_url=rejection_url_manager, additional_info=f"Telah disetujui oleh Koordinator: {approver}<br><br>{link_pic}")
+                email_html_manager = render_template('email_template.html', doc_type="RAB", level='Manajer', form_data=row_data, approval_url=approval_url_manager, rejection_url=rejection_url_manager, additional_info=f"Telah disetujui oleh Koordinator: {approver}<br><br>{link_pic}")
                 pdf_nonsbo_bytes = create_pdf_from_data(google_provider, row_data, exclude_sbo=True)
                 pdf_recap_bytes = create_recap_pdf(google_provider, row_data)
                 pdf_nonsbo_filename = f"RAB_NON-SBO_{jenis_toko}_{row_data.get('Nomor Ulok')}.pdf"
@@ -610,6 +611,7 @@ def submit_spk():
 
         email_html = render_template(
             'email_template.html',
+            doc_type="SPK",
             level='Branch Manager',
             form_data=data,
             approval_url=approval_url,

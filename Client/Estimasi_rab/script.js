@@ -79,6 +79,30 @@ const parseRupiah = (formattedString) => parseFloat(String(formattedString).repl
 const formatNumberWithSeparators = (num) => (num === null || isNaN(num)) ? '0' : new Intl.NumberFormat('id-ID').format(num);
 const parseFormattedNumber = (str) => typeof str !== 'string' ? (Number(str) || 0) : (parseFloat(String(str).replace(/\./g, '').replace(/,/g, '.')) || 0);
 
+function hitungLuasTerbangunan() {
+  const luasBangunan = parseFloat(document.getElementById("luas_bangunan")?.value) || 0;
+  const luasAreaTerbuka = parseFloat(document.getElementById("luas_area_terbuka")?.value) || 0;
+
+  if (!luasBangunan) {
+    document.getElementById("luas_terbangunan").value = "";
+    return;
+  }
+
+  const hasil = luasBangunan - (luasAreaTerbuka / 2);
+
+  if (hasil < 0) {
+    document.getElementById("luas_terbangunan").value = "";
+    showMessage("Luas Terbangunan tidak boleh bernilai minus.", "error"); // opsional jika punya toast
+    return;
+  }
+
+  document.getElementById("luas_terbangunan").value = hasil.toFixed(2);
+}
+
+document.getElementById("luas_bangunan")?.addEventListener("input", hitungLuasTerbangunan);
+document.getElementById("luas_area_terbuka")?.addEventListener("input", hitungLuasTerbangunan);
+
+
 const handleCurrencyInput = (event) => {
     const input = event.target;
     let numericValue = input.value.replace(/[^0-9]/g, '');
@@ -558,12 +582,24 @@ async function handleFormSubmit() {
   const formData = new FormData(form);
   const data = Object.fromEntries(formData.entries());
 
-  // Tambah mapping agar cocok dengan header di Sheets (Form3: nama_toko)
+  const luasTerbangunan = parseFloat(
+    document.getElementById("luas_terbangunan")?.value
+  );
+
+  if (isNaN(luasTerbangunan) || luasTerbangunan <= 0) {
+    messageDiv.textContent =
+      "Error: Luas Terbangunan tidak valid atau bernilai minus. Periksa kembali input Luas Bangunan & Area Terbuka.";
+    messageDiv.style.backgroundColor = "#dc3545";
+    messageDiv.style.display = "block";
+    submitButton.disabled = false;
+    return;
+  }
+
+  // Mapping nama_toko
   data["nama_toko"] =
     data["Nama_Toko"] ||
     document.getElementById("nama_toko")?.value?.trim() ||
     "";
-  // (opsional) simpan juga versi CamelCase untuk kompatibilitas internal
   data["Nama_Toko"] = data["nama_toko"];
 
   data["Cabang"] = cabangSelect.value;

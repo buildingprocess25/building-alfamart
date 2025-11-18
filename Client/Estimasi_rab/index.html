@@ -180,12 +180,11 @@
         <label for="luas_terbangunan">Luas Terbangunan (m²):</label>
         <input
           type="text"
-          inputmode="decimal"
           id="luas_terbangunan"
           name="Luas Terbangunan"
-          placeholder="Masukan Luas Terbangunan (e.g., 45.50)"
-          oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*?)\..*/g, '$1').replace(/(\.\d{2})\d+/, '$1')"
-          required
+          placeholder="Otomatis terhitung"
+          readonly
+          style="background-color: #e9ecef; cursor:not-allowed;"
         />
 
         <div class="all-tables-container">

@@ -1,4 +1,10 @@
 // login_script.js
+<script>
+  // Reset session agar login tidak auto-redirect ke home
+  sessionStorage.clear();
+</script>
+
+sessionStorage.removeItem("authenticated");
 
 const APPS_SCRIPT_POST_URL =
   "https://script.google.com/macros/s/AKfycbzPubDTa7E2gT5HeVLv9edAcn1xaTiT3J4BtAVYqaqiFAvFtp1qovTXpqpm-VuNOxQJ/exec";
@@ -120,6 +126,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // ❗ PENTING: jangan simpan session
         sessionStorage.clear();
+        sessionStorage.removeItem("authenticated");
 
         // ❗ JANGAN redirect, biarkan tetap di halaman login
         return;

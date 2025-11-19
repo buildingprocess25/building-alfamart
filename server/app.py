@@ -378,10 +378,7 @@ def handle_rab_approval():
                 base_url = "https://building-alfamart.onrender.com"
                 approval_url_manager = f"{base_url}/api/handle_rab_approval?action=approve&row={row}&level=manager&approver={manager_email}"
                 rejection_url_manager = f"{base_url}/api/reject_form/rab?row={row}&level=manager&approver={manager_email}"
-                link_pic = ("Silakan buat SPK melalui link berikut: "
-                            "<a href='https://building-alfamart.vercel.app/login.html' "
-                            "target='_blank' rel='noopener noreferrer'>Buat SPK</a>")
-                email_html_manager = render_template('email_template.html', doc_type="RAB", level='Manajer', form_data=row_data, approval_url=approval_url_manager, rejection_url=rejection_url_manager, additional_info=f"Telah disetujui oleh Koordinator: {approver}<br><br>{link_pic}")
+                email_html_manager = render_template('email_template.html', doc_type="RAB", level='Manajer', form_data=row_data, approval_url=approval_url_manager, rejection_url=rejection_url_manager, additional_info=f"Telah disetujui oleh Koordinator: {approver}")
                 pdf_nonsbo_bytes = create_pdf_from_data(google_provider, row_data, exclude_sbo=True)
                 pdf_recap_bytes = create_recap_pdf(google_provider, row_data)
                 pdf_nonsbo_filename = f"RAB_NON-SBO_{jenis_toko}_{row_data.get('Nomor Ulok')}.pdf"
@@ -398,22 +395,22 @@ def handle_rab_approval():
             row_data[config.COLUMN_NAMES.MANAGER_APPROVER] = approver
             row_data[config.COLUMN_NAMES.MANAGER_APPROVAL_TIME] = current_time
             
+            # ====== Generate PDFs ======
             pdf_nonsbo_bytes = create_pdf_from_data(google_provider, row_data, exclude_sbo=True)
             pdf_nonsbo_filename = f"DISETUJUI_RAB_NON-SBO_{jenis_toko}_{row_data.get('Nomor Ulok')}.pdf"
 
             pdf_recap_bytes = create_recap_pdf(google_provider, row_data)
             pdf_recap_filename = f"DISETUJUI_REKAP_RAB_{jenis_toko}_{row_data.get('Nomor Ulok')}.pdf"
 
-            link_pdf_nonsbo = google_provider.upload_file_to_drive(pdf_nonsbo_bytes, pdf_nonsbo_filename, 'application/pdf', config.PDF_STORAGE_FOLDER_ID)
-            
-            # KODE TAMBAHAN UNTUK PDF REKAP
+            # Upload ke Drive
+            link_pdf_nonsbo = google_provider.upload_file_to_drive(
+                pdf_nonsbo_bytes, pdf_nonsbo_filename, 'application/pdf', config.PDF_STORAGE_FOLDER_ID
+            )
             link_pdf_rekap = google_provider.upload_file_to_drive(
-                pdf_recap_bytes, 
-                pdf_recap_filename, 
-                'application/pdf', 
-                config.PDF_STORAGE_FOLDER_ID
+                pdf_recap_bytes, pdf_recap_filename, 'application/pdf', config.PDF_STORAGE_FOLDER_ID
             )
 
+            # Update sheet
             google_provider.update_cell(row, config.COLUMN_NAMES.LINK_PDF_NONSBO, link_pdf_nonsbo)
             google_provider.update_cell(row, config.COLUMN_NAMES.LINK_PDF_REKAP, link_pdf_rekap)
 
@@ -422,43 +419,81 @@ def handle_rab_approval():
 
             google_provider.copy_to_approved_sheet(row_data)
 
-            if creator_email:
-                kontraktor_emails = google_provider.get_emails_by_jabatan(cabang, config.JABATAN.KONTRAKTOR)
-                coordinator_emails = google_provider.get_emails_by_jabatan(cabang, config.JABATAN.KOORDINATOR)
-                manager_email = approver
-                cc_set = set(filter(None, kontraktor_emails + coordinator_emails))
-                cc_set.add(manager_email)
-                
-                cc_list = list(cc_set)
-                if creator_email in cc_list:
-                    cc_list.remove(creator_email)
-                
-                subject = f"[FINAL - DISETUJUI] Pengajuan RAB Proyek {nama_toko}: {jenis_toko}"
-                email_body_html = (f"<p>Pengajuan RAB untuk proyek <b>{jenis_toko}</b> di cabang <b>{cabang}</b> telah disetujui sepenuhnya.</p>"
-                                   f"<p>Tiga versi file PDF RAB telah dilampirkan:</p>"
-                                   f"<ul>"
-                                   f"<li><b>{pdf_nonsbo_filename}</b>: Hanya berisi item pekerjaan di luar SBO.</li>"
-                                   f"<li><b>{pdf_recap_filename}</b>: Rekapitulasi Total Biaya.</li>"
-                                   f"</ul>"
-                                   f"<p>Link Google Drive:</p>"
-                                   f"<ul>"
-                                   f"<li><a href='{link_pdf_nonsbo}'>Link PDF Non-SBO</a></li>"
-                                   f"<li><a href='{link_pdf_rekap}'>Link PDF Rekapitulasi</a></li>"
-                                   f"</ul>")
+            # ====== Kumpulkan email dari jabatan ======
+            kontraktor_emails = google_provider.get_emails_by_jabatan(cabang, config.JABATAN.KONTRAKTOR)
+            coordinator_emails = google_provider.get_emails_by_jabatan(cabang, config.JABATAN.KOORDINATOR)
+            manager_email = approver  # manager yang menyetujui
 
-                email_attachments = [
-                    (pdf_nonsbo_filename, pdf_nonsbo_bytes, 'application/pdf'),
-                    (pdf_recap_filename, pdf_recap_bytes, 'application/pdf')
-                ]
-                
+            # ====== Attachment bersama ======
+            email_attachments = [
+                (pdf_nonsbo_filename, pdf_nonsbo_bytes, 'application/pdf'),
+                (pdf_recap_filename, pdf_recap_bytes, 'application/pdf')
+            ]
+
+            subject = f"[FINAL - DISETUJUI] Pengajuan RAB Proyek {nama_toko}: {jenis_toko}"
+
+            if kontraktor_emails:
+                kontraktor_body = (
+                    f"<p>Pengajuan RAB untuk proyek <b>{jenis_toko}</b> cabang <b>{cabang}</b> telah "
+                    f"<b>FINAL DISETUJUI</b>.</p>"
+                    f"<p>Silakan upload Rekapitulasi RAB Termaterai & SPH melalui link berikut:</p>"
+                    f"<p><a href='https://materai-rab-pi.vercel.app/login' "
+                    f"target='_blank'>UPLOAD REKAP RAB TERMATERAI & SPH</a></p>"
+                    f"<p>File PDF terlampir:</p>"
+                    f"<ul>"
+                    f"<li>{pdf_nonsbo_filename}</li>"
+                    f"<li>{pdf_recap_filename}</li>"
+                    f"</ul>"
+                )
+
                 google_provider.send_email(
-                    to=creator_email,
-                    cc=cc_list,
+                    to=kontraktor_emails,
                     subject=subject,
-                    html_body=email_body_html,
+                    html_body=kontraktor_body,
                     attachments=email_attachments
                 )
-            return render_template('response_page.html', title='Persetujuan Berhasil', message='Tindakan Anda telah berhasil diproses.', logo_url=logo_url)
+
+            if coordinator_emails:
+                coordinator_body = (
+                    f"<p>Pengajuan RAB untuk proyek <b>{jenis_toko}</b> cabang <b>{cabang}</b> telah "
+                    f"<b>FINAL DISETUJUI</b>.</p>"
+                    f"<p>File PDF terlampir:</p>"
+                    f"<ul>"
+                    f"<li>{pdf_nonsbo_filename}</li>"
+                    f"<li>{pdf_recap_filename}</li>"
+                    f"</ul>"
+                )
+
+                google_provider.send_email(
+                    to=coordinator_emails,
+                    subject=subject,
+                    html_body=coordinator_body,
+                    attachments=email_attachments
+                )
+
+            if manager_email:
+                manager_body = (
+                    f"<p>Pengajuan RAB untuk proyek <b>{jenis_toko}</b> cabang <b>{cabang}</b> telah "
+                    f"<b>FINAL DISETUJUI</b>.</p>"
+                    f"<p>File PDF terlampir:</p>"
+                    f"<ul>"
+                    f"<li>{pdf_nonsbo_filename}</li>"
+                    f"<li>{pdf_recap_filename}</li>"
+                    f"</ul>"
+                )
+
+                google_provider.send_email(
+                    to=[manager_email],
+                    subject=subject,
+                    html_body=manager_body,
+                    attachments=email_attachments
+                )
+
+            return render_template('response_page.html', 
+                title='Persetujuan Berhasil', 
+                message='Tindakan Anda telah berhasil diproses.', 
+                logo_url=logo_url
+            )
 
     except Exception as e:
         traceback.print_exc()

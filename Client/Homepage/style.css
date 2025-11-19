@@ -20,7 +20,8 @@ body {
     align-items: center;
     justify-content: center;
     padding: 1rem;
-    background-color: var(--card-background);
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    color: white;
     border-bottom: 1px solid var(--border-color);
 }
 

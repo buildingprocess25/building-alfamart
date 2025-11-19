@@ -56,31 +56,9 @@
           <p>Pengisian form Penyimpanan Dokumen.</p>
         </a>
       </nav>
-      <div class="logout-container" id="auth-container"></div>
     </main>
 
-    <script>
-      document.addEventListener("DOMContentLoaded", () => {
-        const isAuthenticated = sessionStorage.getItem("authenticated");
-        const authContainer = document.getElementById("auth-container");
-
-        if (isAuthenticated) {
-          // Jika pengguna sudah login, tampilkan tombol Logout
-          authContainer.innerHTML =
-            '<button id="logout-button" class="btn-logout">Logout</button>';
-          document
-            .getElementById("logout-button")
-            .addEventListener("click", () => {
-              sessionStorage.clear();
-              window.location.reload();
-            });
-        } else {
-          // Jika pengguna belum login, tampilkan tombol Login
-          authContainer.innerHTML =
-            '<a href="/login.html" class="btn-login">Login</a>';
-        }
-      });
-    </script>
+    
   </body>
 </html>
 

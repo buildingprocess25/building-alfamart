@@ -1,135 +1,181 @@
 // login_script.js
 
-// ▼▼▼ URL UNTUK MENCATAT UPAYA LOGIN (OPSIONAL) ▼▼▼
-const APPS_SCRIPT_POST_URL = "https://script.google.com/macros/s/AKfycbzPubDTa7E2gT5HeVLv9edAcn1xaTiT3J4BtAVYqaqiFAvFtp1qovTXpqpm-VuNOxQJ/exec"; 
-// ▼▼▼ URL BARU UNTUK VALIDASI LOGIN KE BACKEND PYTHON ANDA ▼▼▼
-const PYTHON_API_LOGIN_URL = "https://building-alfamart.onrender.com/api/login"; 
+const APPS_SCRIPT_POST_URL =
+  "https://script.google.com/macros/s/AKfycbzPubDTa7E2gT5HeVLv9edAcn1xaTiT3J4BtAVYqaqiFAvFtp1qovTXpqpm-VuNOxQJ/exec";
+const PYTHON_API_LOGIN_URL =
+  "https://building-alfamart.onrender.com/api/login";
 
-/**
- * Mengirim data percobaan login ke Google Apps Script (untuk logging).
- * @param {string} username - Username yang dimasukkan.
- * @param {string} cabang - Password/Cabang yang dimasukkan.
- * @param {string} status - Status login ('Success' atau 'Failed').
- */
 async function logLoginAttempt(username, cabang, status) {
-    const logData = {
-        requestType: 'loginAttempt', // Penanda ini penting untuk backend
-        username: username,
-        cabang: cabang,
-        status: status
-    };
+  const logData = {
+    requestType: "loginAttempt",
+    username: username,
+    cabang: cabang,
+    status: status,
+  };
 
-    try {
-        await fetch(APPS_SCRIPT_POST_URL, {
-            method: 'POST',
-            redirect: 'follow',
-            headers: {
-                'Content-Type': 'text/plain;charset=utf-8',
-            },
-            body: JSON.stringify(logData)
-        });
-        console.log(`Login attempt logged: ${status}`);
-    } catch (error) {
-        console.error('Failed to log login attempt:', error);
-    }
+  try {
+    await fetch(APPS_SCRIPT_POST_URL, {
+      method: "POST",
+      redirect: "follow",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8",
+      },
+      body: JSON.stringify(logData),
+    });
+    console.log(`Login attempt logged: ${status}`);
+  } catch (error) {
+    console.error("Failed to log login attempt:", error);
+  }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    const passwordInput = document.getElementById("password");
-    const togglePassword = document.getElementById("togglePassword");
-    const eyeOpen = document.getElementById("eyeOpen");
-    const eyeSlashed = document.getElementById("eyeSlashed");
+document.addEventListener("DOMContentLoaded", () => {
+  const passwordInput = document.getElementById("password");
+  const togglePassword = document.getElementById("togglePassword");
+  const eyeOpen = document.getElementById("eyeOpen");
+  const eyeSlashed = document.getElementById("eyeSlashed");
 
-    if (passwordInput && togglePassword && eyeOpen && eyeSlashed) {
-        togglePassword.addEventListener("click", () => {
-            const type = passwordInput.getAttribute("type") === "password" ? "text" : "password";
-            passwordInput.setAttribute("type", type);
+  if (passwordInput && togglePassword && eyeOpen && eyeSlashed) {
+    togglePassword.addEventListener("click", () => {
+      const type =
+        passwordInput.getAttribute("type") === "password"
+          ? "text"
+          : "password";
+      passwordInput.setAttribute("type", type);
 
-            if (type === "password") {
-                eyeOpen.style.display = "none";
-                eyeSlashed.style.display = "block";
-            } else {
-                eyeOpen.style.display = "block";
-                eyeSlashed.style.display = "none";
-            }
-        });
+      if (type === "password") {
+        eyeOpen.style.display = "none";
+        eyeSlashed.style.display = "block";
+      } else {
+        eyeOpen.style.display = "block";
+        eyeSlashed.style.display = "none";
+      }
+    });
+  }
+
+  const loginForm = document.getElementById("login-form");
+  const loginMessage = document.getElementById("login-message");
+
+  loginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    // Validasi jam operasional
+    try {
+      const now = new Date();
+      const options = {
+        timeZone: "Asia/Jakarta",
+        hour: "2-digit",
+        hour12: false,
+      };
+      const currentHour = parseInt(
+        new Intl.DateTimeFormat("en-US", options).format(now)
+      );
+
+      const startHour = 6;
+      const endHour = 18;
+
+      if (currentHour < startHour || currentHour >= endHour) {
+        loginMessage.textContent =
+          "Login di luar jam operasional. Silakan login antara pukul 06:00 - 18:00 WIB.";
+        loginMessage.className = "login-message error";
+        loginMessage.style.display = "block";
+        return;
+      }
+    } catch (err) {
+      console.error("Gagal memvalidasi jam:", err);
+      loginMessage.textContent =
+        "Gagal memvalidasi jam, silakan coba lagi.";
+      loginMessage.className = "login-message error";
+      loginMessage.style.display = "block";
+      return;
     }
 
-    const loginForm = document.getElementById('login-form');
-    const loginMessage = document.getElementById('login-message');
+    const username = loginForm.username.value;
+    const password = passwordInput.value;
 
-    loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
+    loginMessage.textContent = "Logging in...";
+    loginMessage.className = "login-message";
+    loginMessage.style.display = "block";
 
-        try {
-            const now = new Date();
-            const options = { timeZone: "Asia/Jakarta", hour: '2-digit', hour12: false };
-            const currentHour = parseInt(new Intl.DateTimeFormat('en-US', options).format(now));
+    try {
+      const response = await fetch(PYTHON_API_LOGIN_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: username, cabang: password }),
+      });
 
-            const startHour = 6; 
-            const endHour = 18; 
+      const result = await response.json();
 
-            if (currentHour < startHour || currentHour >= endHour) {
-                loginMessage.textContent = 'Login di luar jam operasional. Silakan login antara pukul 06:00 - 18:00 WIB.';
-                loginMessage.className = 'login-message error';
-                loginMessage.style.display = 'block';
-                return;
-            }
-            } catch (err) {
-            console.error("Gagal memvalidasi jam:", err);
-            loginMessage.textContent = 'Gagal memvalidasi jam, silakan coba lagi.';
-            loginMessage.className = 'login-message error';
-            loginMessage.style.display = 'block';
-            return;
-            }
+      // =====================
+      //   CEK ROLE AKSES
+      // =====================
+      if (response.ok && result.status === "success") {
+        const currentPage = window.location.pathname;
 
-        const username = loginForm.username.value;
-        const password = passwordInput.value;
+        let allowedRoles = [];
 
-        loginMessage.textContent = 'Logging in...';
-        loginMessage.className = 'login-message';
-        loginMessage.style.display = 'block';
+        const isSPK = currentPage.includes("/SPK_form");
+        const isRAB = currentPage.includes("/Estimasi_rab");
 
-        try {
-            const response = await fetch(PYTHON_API_LOGIN_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email: username, cabang: password }),
-            });
-
-            const result = await response.json();
-
-            if (response.ok && result.status === 'success') {
-                logLoginAttempt(username, password, 'Success');
-
-                loginMessage.textContent = 'Login berhasil! Mengarahkan...';
-                loginMessage.className = 'login-message success';
-                
-                sessionStorage.setItem('authenticated', 'true');
-                sessionStorage.setItem('loggedInUserEmail', username);
-                sessionStorage.setItem('loggedInUserCabang', password);
-                sessionStorage.setItem('userRole', result.role); // Simpan jabatan pengguna
-
-                setTimeout(() => {
-                    const redirectUrl = sessionStorage.getItem('redirectTo');
-                    if (redirectUrl) {
-                        sessionStorage.removeItem('redirectTo'); // Hapus setelah digunakan
-                        window.location.href = redirectUrl;
-                    } else {
-                        window.location.href = "/"; // Arahkan ke homepage (index.html)
-                    }
-                }, 1500);
-            } else {
-                logLoginAttempt(username, password, 'Failed');
-                loginMessage.textContent = result.message || 'Username atau password salah.';
-                loginMessage.className = 'login-message error';
-            }
-        } catch (error) {
-            logLoginAttempt(username, password, 'Failed');
-            loginMessage.textContent = 'Gagal terhubung ke server. Coba lagi nanti.';
-            loginMessage.className = 'login-message error';
+        if (isSPK) {
+          allowedRoles = ["BRANCH BUILDING & MAINTENANCE MANAGER"];
         }
-    });
+
+        if (isRAB) {
+          allowedRoles = ["KONTRAKTOR"];
+        }
+
+        // Jika role tidak sesuai → TOLAK LOGIN
+        if (
+          allowedRoles.length > 0 &&
+          !allowedRoles.includes(result.role)
+        ) {
+          loginMessage.textContent =
+            "Anda tidak memiliki izin untuk mengakses halaman ini.";
+          loginMessage.className = "login-message error";
+          loginMessage.style.display = "block";
+
+          logLoginAttempt(username, password, "Failed");
+
+          // PENTING: Jangan simpan session apapun
+          sessionStorage.clear();
+          return;
+        }
+
+        // =====================
+        //  ROLE BENAR → LOGIN
+        // =====================
+        logLoginAttempt(username, password, "Success");
+
+        loginMessage.textContent = "Login berhasil! Mengarahkan...";
+        loginMessage.className = "login-message success";
+
+        sessionStorage.setItem("authenticated", "true");
+        sessionStorage.setItem("loggedInUserEmail", username);
+        sessionStorage.setItem("loggedInUserCabang", password);
+        sessionStorage.setItem("userRole", result.role);
+
+        setTimeout(() => {
+          const redirectUrl = sessionStorage.getItem("redirectTo");
+          if (redirectUrl) {
+            sessionStorage.removeItem("redirectTo");
+            window.location.href = redirectUrl;
+          } else {
+            window.location.href = "/";
+          }
+        }, 1200);
+      } else {
+        logLoginAttempt(username, password, "Failed");
+        loginMessage.textContent =
+          result.message || "Username atau password salah.";
+        loginMessage.className = "login-message error";
+      }
+    } catch (error) {
+      logLoginAttempt(username, password, "Failed");
+      loginMessage.textContent =
+        "Gagal terhubung ke server. Coba lagi nanti.";
+      loginMessage.className = "login-message error";
+    }
+  });
 });

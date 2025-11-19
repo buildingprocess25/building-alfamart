@@ -432,18 +432,29 @@ def handle_rab_approval():
 
             subject = f"[FINAL - DISETUJUI] Pengajuan RAB Proyek {nama_toko}: {jenis_toko}"
 
+            # Template body utama (bold + link Google Drive)
+            base_body = (
+                f"<p>Pengajuan RAB untuk proyek <b>{jenis_toko}</b> di cabang <b>{cabang}</b> "
+                f"telah disetujui sepenuhnya.</p>"
+                f"<p>Tiga versi file PDF RAB telah dilampirkan:</p>"
+                f"<ul>"
+                f"<li><b>{pdf_nonsbo_filename}</b>: Hanya berisi item pekerjaan di luar SBO.</li>"
+                f"<li><b>{pdf_recap_filename}</b>: Rekapitulasi Total Biaya.</li>"
+                f"</ul>"
+                f"<p>Link Google Drive:</p>"
+                f"<ul>"
+                f"<li><a href='{link_pdf_nonsbo}'>Link PDF Non-SBO</a></li>"
+                f"<li><a href='{link_pdf_rekap}'>Link PDF Rekapitulasi</a></li>"
+                f"</ul>"
+            )
+
+            # 1) KONTRAKTOR → body utama + link upload materai/SPH
             if kontraktor_emails:
                 kontraktor_body = (
-                    f"<p>Pengajuan RAB untuk proyek <b>{jenis_toko}</b> cabang <b>{cabang}</b> telah "
-                    f"<b>FINAL DISETUJUI</b>.</p>"
+                    base_body +
                     f"<p>Silakan upload Rekapitulasi RAB Termaterai & SPH melalui link berikut:</p>"
                     f"<p><a href='https://materai-rab-pi.vercel.app/login' "
                     f"target='_blank'>UPLOAD REKAP RAB TERMATERAI & SPH</a></p>"
-                    f"<p>File PDF terlampir:</p>"
-                    f"<ul>"
-                    f"<li>{pdf_nonsbo_filename}</li>"
-                    f"<li>{pdf_recap_filename}</li>"
-                    f"</ul>"
                 )
 
                 google_provider.send_email(
@@ -453,39 +464,21 @@ def handle_rab_approval():
                     attachments=email_attachments
                 )
 
+            # 2) KOORDINATOR → hanya body utama
             if coordinator_emails:
-                coordinator_body = (
-                    f"<p>Pengajuan RAB untuk proyek <b>{jenis_toko}</b> cabang <b>{cabang}</b> telah "
-                    f"<b>FINAL DISETUJUI</b>.</p>"
-                    f"<p>File PDF terlampir:</p>"
-                    f"<ul>"
-                    f"<li>{pdf_nonsbo_filename}</li>"
-                    f"<li>{pdf_recap_filename}</li>"
-                    f"</ul>"
-                )
-
                 google_provider.send_email(
                     to=coordinator_emails,
                     subject=subject,
-                    html_body=coordinator_body,
+                    html_body=base_body,
                     attachments=email_attachments
                 )
 
+            # 3) MANAGER → hanya body utama
             if manager_email:
-                manager_body = (
-                    f"<p>Pengajuan RAB untuk proyek <b>{jenis_toko}</b> cabang <b>{cabang}</b> telah "
-                    f"<b>FINAL DISETUJUI</b>.</p>"
-                    f"<p>File PDF terlampir:</p>"
-                    f"<ul>"
-                    f"<li>{pdf_nonsbo_filename}</li>"
-                    f"<li>{pdf_recap_filename}</li>"
-                    f"</ul>"
-                )
-
                 google_provider.send_email(
                     to=[manager_email],
                     subject=subject,
-                    html_body=manager_body,
+                    html_body=base_body,
                     attachments=email_attachments
                 )
 

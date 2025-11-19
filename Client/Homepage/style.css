@@ -78,14 +78,14 @@ body {
 
 .menu-item:hover {
     transform: translateY(-5px);
-    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 10px 15px #b91c1c;
 }
 
 .menu-item h3 {
     font-size: 1.25rem;
     font-weight: 600;
     margin-bottom: 0.5rem;
-    color: #b91c1c;
+    color: #dc2626;
 }
 
 .menu-item p {

@@ -110,9 +110,16 @@ document.addEventListener("DOMContentLoaded", () => {
         sessionStorage.setItem("userRole", userRole);
 
         setTimeout(() => {
-          window.location.href = "/";
-        }, 1500);
-
+            if (loginType === "rab") {
+                window.location.href = "/Estimasi_rab/index.html";
+            } 
+            else if (loginType === "spk") {
+                window.location.href = "/SPK_form/index.html";
+            } 
+            else {
+                window.location.href = "/";
+            }
+        }, 1200);
       } else {
         if (result.message === "Invalid credentials") {
           loginMessage.textContent =

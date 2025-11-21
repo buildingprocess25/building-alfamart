@@ -424,7 +424,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function checkSessionTime() {
     try {
-      const startHour = 6;
+      const startHour = 0;
       const endHour = 18;
 
       const now = new Date();

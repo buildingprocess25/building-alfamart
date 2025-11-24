@@ -61,7 +61,7 @@ const branchGroups = {
 };
 
 const branchToUlokMap = {
-    "WHC IMAM BONJOL": "7AZ1", "LUWU": "2VZ1", "KARAWANG": "1JZ1", "REMBANG": "2AZ1",
+    "LUWU": "2VZ1", "KARAWANG": "1JZ1", "REMBANG": "2AZ1",
     "BANJARMASIN": "1GZ1", "PARUNG": "1MZ1", "TEGAL": "2PZ1", "GORONTALO": "2SZ1",
     "PONTIANAK": "1PZ1", "LOMBOK": "1SZ1", "KOTABUMI": "1VZ1", "SERANG": "2GZ1",
     "CIANJUR": "2JZ1", "BALARAJA": "TZ01", "SIDOARJO": "UZ01", "MEDAN": "WZ01",
@@ -770,7 +770,7 @@ async function initializePage() {
 
     if (userCabang) {
         if (userCabang === 'CIKOKOL') {
-            const cikokolOptions = { "CIKOKOL": "KZ01", "WHC IMAM BONJOL": "7AZ1" };
+            const cikokolOptions = { "CIKOKOL": "KZ01" };
             for (const name in cikokolOptions) {
                 const option = document.createElement('option');
                 option.value = cikokolOptions[name];

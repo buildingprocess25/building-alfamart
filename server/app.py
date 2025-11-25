@@ -420,25 +420,9 @@ def handle_rab_approval():
             google_provider.copy_to_approved_sheet(row_data)
 
             # ====== Kumpulkan email dari jabatan ======
-            # KOORDINATOR & MANAGER tetap sama
-            coordinator_emails = google_provider.get_emails_by_jabatan(
-                cabang,
-                config.JABATAN.KOORDINATOR
-            )
+            kontraktor_emails = google_provider.get_emails_by_jabatan(cabang, config.JABATAN.KONTRAKTOR)
+            coordinator_emails = google_provider.get_emails_by_jabatan(cabang, config.JABATAN.KOORDINATOR)
             manager_email = approver  # manager yang menyetujui
-
-            # KONTRAKTOR: ambil khusus berdasarkan cabang
-            kontraktor_list = google_provider.get_kontraktor_by_cabang(cabang)
-
-            # Jika get_kontraktor_by_cabang mengembalikan list of dict:
-            #   [{ "Email": "a@kontraktor.com", ... }, ...]
-            # maka kita ambil hanya field email-nya:
-            kontraktor_emails = [
-                k.get("Email") or k.get("email")
-                for k in kontraktor_list
-                if k.get("Email") or k.get("email")
-            ]
-
 
             # ====== Attachment bersama ======
             email_attachments = [

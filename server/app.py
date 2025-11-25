@@ -363,7 +363,7 @@ def handle_rab_approval():
                         f"<p><b>Alasan Penolakan:</b></p>"
                         f"<p><i>{reason}</i></p>"
                         f"<p>Silakan ajukan revisi RAB Anda melalui link berikut:</p>"
-                        f"<p><a href='https://building-alfamart.vercel.app/Estimasi_rab/' target='_blank' rel='noopener noreferrer'>Input Ulang RAB</a></p>")
+                        f"<p><a href='https://building-alfamart.vercel.app/login_rab.html' target='_blank' rel='noopener noreferrer'>Input Ulang RAB</a></p>")
                 google_provider.send_email(to=creator_email, subject=subject, html_body=body)
             return render_template('response_page.html', title='Permintaan Ditolak', message='Status permintaan telah diperbarui.', logo_url=logo_url)
 
@@ -811,7 +811,7 @@ def handle_spk_approval():
                         f"<p><b>Alasan Penolakan:</b></p>"
                         f"<p><i>{reason}</i></p>"
                         f"<p>Silakan ajukan revisi SPK Anda melalui link berikut:</p>"
-                        f"<p><a href='https://building-alfamart.vercel.app/SPK_form/' target='_blank' rel='noopener noreferrer'>Input Ulang SPK</a></p>")
+                        f"<p><a href='https://building-alfamart.vercel.app/login_spk.html' target='_blank' rel='noopener noreferrer'>Input Ulang SPK</a></p>")
                 google_provider.send_email(to=initiator_email, subject=subject, html_body=body)
 
             return render_template('response_page.html', title='Permintaan Ditolak', message='Status permintaan telah diperbarui menjadi ditolak.', logo_url=logo_url)

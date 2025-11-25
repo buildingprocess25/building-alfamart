@@ -420,7 +420,8 @@ def handle_rab_approval():
             google_provider.copy_to_approved_sheet(row_data)
 
             # ====== Kumpulkan email dari jabatan ======
-            kontraktor_emails = google_provider.get_emails_by_jabatan(cabang, config.JABATAN.KONTRAKTOR)
+            email_pembuat = row_data.get(config.COLUMN_NAMES.EMAIL_PEMBUAT)
+            kontraktor_emails = [email_pembuat] if email_pembuat else []
             coordinator_emails = google_provider.get_emails_by_jabatan(cabang, config.JABATAN.KOORDINATOR)
             manager_email = approver  # manager yang menyetujui
 

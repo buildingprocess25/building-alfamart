@@ -4,20 +4,211 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Homepage - Aplikasi Building & Maintenance</title>
-    <link rel="stylesheet" href="/Homepage/style.css" />
     <link rel="icon" href="/Assets/favicon.ico" type="image/x-icon" />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
+    <style>
+      :root {
+        --primary-color: #005a9e;
+        --secondary-color: #e53e3e;
+        --background-color: #f4f7f6;
+        --card-background: #ffffff;
+        --text-color: #2d3748;
+        --subtle-text-color: #718096;
+        --border-color: #e2e8f0;
+      }
+
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: var(--background-color);
+        color: var(--text-color);
+        margin: 0;
+      }
+
+      .main-header {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+        color: white;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .header-logo-container {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-right: 1rem;
+      }
+
+      .header-logo {
+        height: 40px;
+      }
+
+      .building-logo {
+        height: 50px;
+        animation: logoPopOut 1.5s ease-out forwards;
+        opacity: 0;
+        transform: scale(0);
+      }
+
+      @keyframes logoPopOut {
+        0% {
+          opacity: 0;
+          transform: scale(0) rotate(-180deg);
+        }
+        60% {
+          opacity: 1;
+          transform: scale(1.2) rotate(10deg);
+        }
+        80% {
+          transform: scale(0.9) rotate(-5deg);
+        }
+        100% {
+          opacity: 1;
+          transform: scale(1) rotate(0deg);
+        }
+      }
+
+      .main-header h1 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: white;
+        animation: fadeInSlide 1s ease-out 0.5s forwards;
+        opacity: 0;
+      }
+
+      @keyframes fadeInSlide {
+        from {
+          opacity: 0;
+          transform: translateY(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .container {
+        max-width: 900px;
+        margin: 2rem auto;
+        padding: 2rem;
+      }
+
+      .welcome-message {
+        text-align: center;
+        margin-bottom: 3rem;
+      }
+
+      .welcome-message h2 {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+      }
+
+      .welcome-message p {
+        font-size: 1.1rem;
+        color: var(--subtle-text-color);
+      }
+
+      .menu-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+      }
+
+      .menu-item {
+        display: block;
+        background-color: var(--card-background);
+        padding: 1.5rem;
+        border-radius: 12px;
+        text-decoration: none;
+        color: inherit;
+        border: 1px solid var(--border-color);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+      }
+
+      .menu-item:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 15px rgba(185, 28, 28, 0.3);
+      }
+
+      .menu-item h3 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+      }
+
+      .menu-item p {
+        font-size: 1rem;
+        color: var(--subtle-text-color);
+        line-height: 1.5;
+      }
+
+      .menu-item.disabled {
+        background-color: #f7fafc;
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+
+      .menu-item.disabled:hover {
+        transform: none;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      }
+    </style>
   </head>
   <body>
     <header class="main-header">
-      <img
-        src="/Assets/Alfamart-Emblem.png"
-        alt="Alfamart Logo"
-        class="header-logo"
-      />
+      <div class="header-logo-container">
+        <img
+          src="/Assets/Alfamart-Emblem.png"
+          alt="Alfamart Logo"
+          class="header-logo"
+        />
+        <svg class="building-logo" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+          <!-- Shield Base -->
+          <path d="M200 50 L200 350 L100 300 L100 100 Z" fill="#9B2C2C" opacity="0.9"/>
+          <path d="M200 50 L200 350 L300 300 L300 100 Z" fill="#DC2626" opacity="0.9"/>
+          
+          <!-- Gold/Yellow curved band -->
+          <path d="M150 200 Q200 250 250 200 Q200 280 150 200 Z" fill="#FBD38D" opacity="0.95"/>
+          
+          <!-- Buildings on top -->
+          <rect x="170" y="20" width="30" height="60" fill="#9B2C2C" rx="2"/>
+          <rect x="210" y="30" width="25" height="50" fill="#FBD38D" rx="2"/>
+          <rect x="245" y="35" width="20" height="45" fill="#2C5282" rx="2"/>
+          
+          <!-- Windows on buildings -->
+          <rect x="177" y="30" width="7" height="8" fill="#FBD38D"/>
+          <rect x="187" y="30" width="7" height="8" fill="#FBD38D"/>
+          <rect x="177" y="45" width="7" height="8" fill="#FBD38D"/>
+          <rect x="187" y="45" width="7" height="8" fill="#FBD38D"/>
+          
+          <rect x="217" y="40" width="5" height="6" fill="#2C5282"/>
+          <rect x="225" y="40" width="5" height="6" fill="#2C5282"/>
+          <rect x="217" y="52" width="5" height="6" fill="#2C5282"/>
+          <rect x="225" y="52" width="5" height="6" fill="#2C5282"/>
+          
+          <rect x="250" y="45" width="4" height="5" fill="#FBD38D"/>
+          <rect x="256" y="45" width="4" height="5" fill="#FBD38D"/>
+          
+          <!-- House/roof on left -->
+          <polygon points="140,140 110,170 170,170" fill="#FBD38D"/>
+          <rect x="125" y="170" width="30" height="40" fill="#2C5282"/>
+          <rect x="132" y="180" width="7" height="10" fill="#FBD38D"/>
+          <rect x="145" y="180" width="7" height="10" fill="#FBD38D"/>
+          
+          <!-- Building detail on right -->
+          <polygon points="260,140 290,170 230,170" fill="#E9967A"/>
+          <rect x="245" y="170" width="30" height="35" fill="#DC2626"/>
+          <rect x="252" y="178" width="6" height="8" fill="#FBD38D"/>
+          <rect x="262" y="178" width="6" height="8" fill="#FBD38D"/>
+        </svg>
+      </div>
       <h1>Property & Development</h1>
     </header>
 
@@ -57,8 +248,5 @@
         </a>
       </nav>
     </main>
-
-    
   </body>
 </html>
-

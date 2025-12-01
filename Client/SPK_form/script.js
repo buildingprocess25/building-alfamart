@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
     "BANDUNG 2": "NZ01",
     BEKASI: "CZ01",
     CILACAP: "IZ01",
-    CILEUNGSI2: "JZ01",
+    CILEUNGSI: "JZ01",
     SEMARANG: "HZ01",
     CIKOKOL: "KZ01",
     LAMPUNG: "LZ01",

@@ -200,10 +200,7 @@ def create_pdf_from_data(google_provider, form_data, exclude_sbo=False):
 
     logo_path = 'file:///' + os.path.abspath(os.path.join('static', 'Alfamart-Emblem.png'))
 
-    nama_pt = ""
-    cabang_val = form_data.get(config.COLUMN_NAMES.CABANG)
-    if cabang_val:
-        nama_pt = form_data.get(config.COLUMN_NAMES.NAMA_PT)
+    nama_pt = form_data.get(config.COLUMN_NAMES.NAMA_PT)
 
     html_string = render_template(
         'pdf_report.html', 

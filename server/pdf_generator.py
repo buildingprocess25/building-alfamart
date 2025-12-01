@@ -200,6 +200,11 @@ def create_pdf_from_data(google_provider, form_data, exclude_sbo=False):
 
     logo_path = 'file:///' + os.path.abspath(os.path.join('static', 'Alfamart-Emblem.png'))
 
+    nama_pt = ""
+    cabang_val = form_data.get(config.COLUMN_NAMES.CABANG)
+    if cabang_val:
+        nama_pt = get_nama_pt_by_cabang(google_provider, cabang_val)
+
     html_string = render_template(
         'pdf_report.html', 
         data=template_data,
@@ -214,7 +219,8 @@ def create_pdf_from_data(google_provider, form_data, exclude_sbo=False):
         coordinator_approval_details=coordinator_approval_details,
         manager_approval_details=manager_approval_details,
         format_rupiah=format_rupiah,
-        tanggal_pengajuan=tanggal_pengajuan_str
+        tanggal_pengajuan=tanggal_pengajuan_str,
+        nama_pt=nama_pt
     )
 
     return HTML(string=html_string).write_pdf()

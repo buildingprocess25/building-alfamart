@@ -32,6 +32,7 @@ class COLUMN_NAMES:
     LOKASI = "Nomor Ulok"
     PROYEK = "Proyek"
     CABANG = "Cabang"
+    NAMA_PT = "Nama_PT"
     LINGKUP_PEKERJAAN = "Lingkup_Pekerjaan"
     KOORDINATOR_APPROVER = "Pemberi Persetujuan Koordinator"
     KOORDINATOR_APPROVAL_TIME = "Waktu Persetujuan Koordinator"

@@ -203,7 +203,7 @@ def create_pdf_from_data(google_provider, form_data, exclude_sbo=False):
     nama_pt = ""
     cabang_val = form_data.get(config.COLUMN_NAMES.CABANG)
     if cabang_val:
-        nama_pt = get_nama_pt_by_cabang(google_provider, cabang_val)
+        nama_pt = form_data.get(config.COLUMN_NAMES.NAMA_PT)
 
     html_string = render_template(
         'pdf_report.html', 

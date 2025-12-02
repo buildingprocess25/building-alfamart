@@ -33,7 +33,13 @@ def get_nama_pt_by_cabang(google_provider, cabang):
         cabang_sheet = google_provider.sheet.worksheet(config.CABANG_SHEET_NAME)
         records = cabang_sheet.get_all_records()
         for record in records:
-            if str(record.get('CABANG', '')).strip().lower() == str(cabang).strip().lower():
+            record_cabang = (
+                record.get('CABANG') or
+                record.get('Cabang') or
+                record.get('cabang')
+            )
+            if str(record_cabang).strip().lower() == str(cabang).strip().lower():
+
                 return record.get('Nama_PT', '').strip()
     except Exception as e:
         print(f"Error getting nama_pt for cabang {cabang}: {e}")
@@ -212,8 +218,12 @@ def create_pdf_from_data(google_provider, form_data, exclude_sbo=False):
 
     logo_path = 'file:///' + os.path.abspath(os.path.join('static', 'Alfamart-Emblem.png'))
 
-    cabang_val = form_data.get(config.COLUMN_NAMES.CABANG)
-    
+    cabang_val = (
+        form_data.get(config.COLUMN_NAMES.CABANG)
+        or form_data.get('Cabang')
+        or form_data.get('cabang')
+    )
+
     # 2. Panggil fungsi lookup yang baru kita buat
     # JANGAN pakai form_data.get(config.COLUMN_NAMES.NAMA_PT) karena datanya tidak ada di form!
     nama_pt_found = get_nama_pt_by_cabang(google_provider, cabang_val)

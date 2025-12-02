@@ -107,6 +107,7 @@ def submit_rab():
     if not data:
         return jsonify({"status": "error", "message": "Invalid JSON data"}), 400
 
+    row_index_to_update = data.get('RowIndex')
     new_row_index = None
     try:
         nomor_ulok_raw = data.get(config.COLUMN_NAMES.LOKASI, '')
@@ -232,10 +233,27 @@ def submit_rab():
         data[config.COLUMN_NAMES.LOKASI] = nomor_ulok_formatted
 
         # --- 6) SIMPAN KE SHEET ---
-        new_row_index = google_provider.append_to_sheet(
-            data,
-            config.DATA_ENTRY_SHEET_NAME
-        )
+        if row_index_to_update:
+            # === MODE REVISI: UPDATE BARIS LAMA ===
+            print(f"Updating existing row: {row_index_to_update}")
+            
+            # Panggil fungsi update row (pastikan fungsi ini ada di google_services.py)
+            # Biasanya methodnya: provider.update_row(sheet_name, row_index, data_dict)
+            google_provider.update_row(
+                config.DATA_ENTRY_SHEET_NAME, 
+                int(row_index_to_update), 
+                data
+            )
+            final_row_index = int(row_index_to_update)
+            
+        else:
+            # === MODE BARU: APPEND BARIS BARU ===
+            print("Appending new row")
+            new_row_index = google_provider.append_to_sheet(
+                data,
+                config.DATA_ENTRY_SHEET_NAME
+            )
+            final_row_index = new_row_index
 
         # --- 7) KIRIM EMAIL KE KOORDINATOR ---
         cabang = data.get('Cabang')
@@ -255,12 +273,12 @@ def submit_rab():
         approver_for_link = coordinator_emails[0]
         approval_url = (
             f"{base_url}/api/handle_rab_approval"
-            f"?action=approve&row={new_row_index}"
+            f"?action=approve&row={final_row_index}"
             f"&level=coordinator&approver={approver_for_link}"
         )
         rejection_url = (
             f"{base_url}/api/reject_form/rab"
-            f"?row={new_row_index}&level=coordinator"
+            f"?row={final_row_index}&level=coordinator"
             f"&approver={approver_for_link}"
         )
 
@@ -285,11 +303,11 @@ def submit_rab():
 
         return jsonify({
             "status": "success",
-            "message": "Data successfully submitted and approval email sent."
+            "message": "Data successfully submitted (Updated/Created) and approval email sent."
         }), 200
 
     except Exception as e:
-        if new_row_index:
+        if new_row_index and not row_index_to_update: 
             google_provider.delete_row(
                 config.DATA_ENTRY_SHEET_NAME,
                 new_row_index

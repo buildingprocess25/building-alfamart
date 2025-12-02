@@ -119,9 +119,11 @@ def submit_rab():
             }), 400
 
         # Cek revisi / duplikasi
+        # Tambahkan parameter lingkup_pekerjaan ke fungsi is_revision
         is_revising = google_provider.is_revision(
             nomor_ulok_raw,
-            data.get('Email_Pembuat')
+            data.get('Email_Pembuat'),
+            lingkup_pekerjaan
         )
 
         if not is_revising and google_provider.check_ulok_exists(nomor_ulok_raw, lingkup_pekerjaan):

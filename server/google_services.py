@@ -285,30 +285,38 @@ class GoogleServiceProvider:
             records = [dict(zip(headers, row)) for row in all_values[1:]]
             
             pending_codes, approved_codes, rejected_submissions = [], [], []
-            processed_locations = set()
+            processed_keys = set() # Ganti nama set agar lebih jelas
             user_cabang = str(cabang).strip().lower()
 
             for record in reversed(records):
                 lokasi = str(record.get(config.COLUMN_NAMES.LOKASI, "")).strip().upper()
-                if not lokasi or lokasi in processed_locations: continue
+                lingkup = str(record.get(config.COLUMN_NAMES.LINGKUP_PEKERJAAN, "")).strip().upper() # Ambil lingkup
+                
+                # Buat kunci unik gabungan
+                unique_key = f"{lokasi}_{lingkup}"
+
+                if not lokasi or unique_key in processed_keys: continue
                 
                 status = str(record.get(config.COLUMN_NAMES.STATUS, "")).strip()
                 record_cabang = str(record.get(config.COLUMN_NAMES.CABANG, "")).strip().lower()
                 
-                if status in [config.STATUS.WAITING_FOR_COORDINATOR, config.STATUS.WAITING_FOR_MANAGER]:
-                    pending_codes.append(lokasi)
-                elif status == config.STATUS.APPROVED:
-                    approved_codes.append(lokasi)
-                elif status in [config.STATUS.REJECTED_BY_COORDINATOR, config.STATUS.REJECTED_BY_MANAGER] and record_cabang == user_cabang:
-                    item_details_json = record.get('Item_Details_JSON', '{}')
-                    if item_details_json:
-                        try:
-                            item_details = json.loads(item_details_json)
-                            record.update(item_details)
-                        except json.JSONDecodeError:
-                            print(f"Warning: Could not decode Item_Details_JSON for {lokasi}")
-                    rejected_submissions.append(record)
-                processed_locations.add(lokasi)
+                # Cek filter berdasarkan user cabang (opsional: tambah cek email jika perlu sangat spesifik)
+                if record_cabang == user_cabang:
+                    if status in [config.STATUS.WAITING_FOR_COORDINATOR, config.STATUS.WAITING_FOR_MANAGER]:
+                        pending_codes.append(lokasi)
+                    elif status == config.STATUS.APPROVED:
+                        approved_codes.append(lokasi)
+                    elif status in [config.STATUS.REJECTED_BY_COORDINATOR, config.STATUS.REJECTED_BY_MANAGER]:
+                        item_details_json = record.get('Item_Details_JSON', '{}')
+                        if item_details_json:
+                            try:
+                                item_details = json.loads(item_details_json)
+                                record.update(item_details)
+                            except json.JSONDecodeError:
+                                print(f"Warning: Could not decode Item_Details_JSON for {lokasi}")
+                        rejected_submissions.append(record)
+                
+                processed_keys.add(unique_key)
 
             return {"active_codes": {"pending": pending_codes, "approved": approved_codes}, "rejected_submissions": rejected_submissions}
         except Exception as e:
@@ -408,13 +416,22 @@ class GoogleServiceProvider:
             print(f"Error checking for existing ulok: {e}")
             return False
     
-    def is_revision(self, nomor_ulok, email_pembuat):
+    def is_revision(self, nomor_ulok, email_pembuat, lingkup_pekerjaan=None):
         try:
             normalized_ulok = str(nomor_ulok).replace("-", "")
+            target_lingkup = str(lingkup_pekerjaan).strip().upper() if lingkup_pekerjaan else None
+            
             all_records = self.data_entry_sheet.get_all_records()
             for record in reversed(all_records):
-                if str(record.get(config.COLUMN_NAMES.LOKASI, "")).replace("-", "") == normalized_ulok and \
-                   record.get(config.COLUMN_NAMES.EMAIL_PEMBUAT, "") == email_pembuat:
+                rec_ulok = str(record.get(config.COLUMN_NAMES.LOKASI, "")).replace("-", "")
+                rec_email = record.get(config.COLUMN_NAMES.EMAIL_PEMBUAT, "")
+                rec_lingkup = str(record.get(config.COLUMN_NAMES.LINGKUP_PEKERJAAN, "")).strip().upper()
+
+                if rec_ulok == normalized_ulok and rec_email == email_pembuat:
+                    # Jika lingkup spesifik diberikan, cek kecocokannya
+                    if target_lingkup and rec_lingkup != target_lingkup:
+                        continue
+                        
                     return record.get(config.COLUMN_NAMES.STATUS, "") in [config.STATUS.REJECTED_BY_COORDINATOR, config.STATUS.REJECTED_BY_MANAGER]
             return False
         except Exception:

@@ -488,10 +488,16 @@ class GoogleServiceProvider:
         updated_row = []
         for col in headers:
             updated_row.append(data_dict.get(col, ""))
+        
+        # Hitung jumlah kolom
+        num_cols = len(headers)
+        
+        # Gunakan fungsi helper untuk mendapatkan huruf kolom terakhir yang benar (misal: "ZZ")
+        last_col_letter = self._get_col_letter(num_cols)
 
-        # Update seluruh baris sekaligus
+        # Update seluruh baris sekaligus dengan range yang valid
         sheet.update(
-            f"A{row_index}:{chr(64 + len(headers))}{row_index}",
+            f"A{row_index}:{last_col_letter}{row_index}",
             [updated_row]
         )
 
@@ -555,3 +561,11 @@ class GoogleServiceProvider:
         except Exception as e:
             print(f"Error searching for rejected row: {e}")
             return None
+        
+    def _get_col_letter(self, n):
+        """Mengubah angka indeks kolom menjadi huruf Excel (misal: 1->A, 27->AA)"""
+        string = ""
+        while n > 0:
+            n, remainder = divmod(n - 1, 26)
+            string = chr(65 + remainder) + string
+        return string

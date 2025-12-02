@@ -27,42 +27,16 @@ def get_nama_lengkap_by_email(google_provider, email):
         print(f"Error getting name for email {email}: {e}")
     return ""
 
-def get_nama_pt_by_cabang(google_provider, nama_cabang_input):
-    """
-    Mencari Nama_PT di sheet Cabang berdasarkan input cabang dari form.
-    """
-    if not nama_cabang_input:
-        return ""
-    
+def get_nama_pt_by_cabang(google_provider, cabang):
+    if not cabang: return ""
     try:
-        # Buka sheet Cabang
         cabang_sheet = google_provider.sheet.worksheet(config.CABANG_SHEET_NAME)
         records = cabang_sheet.get_all_records()
-        
-        # Bersihkan input user agar mudah dicocokkan (lowercase)
-        input_clean = str(nama_cabang_input).strip().lower()
-
         for record in records:
-            # Ambil data kolom 'CABANG' dari sheet (pastikan nama kolom di sheet benar)
-            # Biasanya format di sheet: "G123" atau "G123 - JAKARTA"
-            cabang_db = str(record.get('CABANG', '')).strip().lower()
-            
-            # Logika pencocokan: 
-            # Jika input form berisi kode cabang yg ada di database, atau sebaliknya.
-            if cabang_db and (cabang_db in input_clean or input_clean in cabang_db):
-                # Ambil kolom Nama_PT. 
-                # Pastikan di config.py: NAMA_PT = "Nama_PT" sesuai dengan HEADER DI SHEET CABANG
-                nama_pt = record.get(config.COLUMN_NAMES.Nama_PT, '')
-                
-                # Fallback jika config belum mengambil, coba hardcode string kuncinya
-                if not nama_pt:
-                    nama_pt = record.get('Nama_PT', '') 
-                    
-                return str(nama_pt).strip()
-
+            if str(record.get('CABANG', '')).strip().lower() == str(cabang).strip().lower():
+                return record.get('Nama_PT', '').strip()
     except Exception as e:
-        print(f"Error lookup Nama_PT: {e}")
-        
+        print(f"Error getting nama_pt for cabang {cabang}: {e}")
     return ""
 
 def format_rupiah(number):

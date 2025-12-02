@@ -27,6 +27,44 @@ def get_nama_lengkap_by_email(google_provider, email):
         print(f"Error getting name for email {email}: {e}")
     return ""
 
+def get_nama_pt_by_cabang(google_provider, nama_cabang_input):
+    """
+    Mencari Nama_PT di sheet Cabang berdasarkan input cabang dari form.
+    """
+    if not nama_cabang_input:
+        return ""
+    
+    try:
+        # Buka sheet Cabang
+        cabang_sheet = google_provider.sheet.worksheet(config.CABANG_SHEET_NAME)
+        records = cabang_sheet.get_all_records()
+        
+        # Bersihkan input user agar mudah dicocokkan (lowercase)
+        input_clean = str(nama_cabang_input).strip().lower()
+
+        for record in records:
+            # Ambil data kolom 'CABANG' dari sheet (pastikan nama kolom di sheet benar)
+            # Biasanya format di sheet: "G123" atau "G123 - JAKARTA"
+            cabang_db = str(record.get('CABANG', '')).strip().lower()
+            
+            # Logika pencocokan: 
+            # Jika input form berisi kode cabang yg ada di database, atau sebaliknya.
+            if cabang_db and (cabang_db in input_clean or input_clean in cabang_db):
+                # Ambil kolom Nama_PT. 
+                # Pastikan di config.py: NAMA_PT = "Nama_PT" sesuai dengan HEADER DI SHEET CABANG
+                nama_pt = record.get(config.COLUMN_NAMES.NAMA_PT, '')
+                
+                # Fallback jika config belum mengambil, coba hardcode string kuncinya
+                if not nama_pt:
+                    nama_pt = record.get('Nama_PT', '') 
+                    
+                return str(nama_pt).strip()
+
+    except Exception as e:
+        print(f"Error lookup Nama_PT: {e}")
+        
+    return ""
+
 def format_rupiah(number):
     try:
         num = float(number)
@@ -200,7 +238,15 @@ def create_pdf_from_data(google_provider, form_data, exclude_sbo=False):
 
     logo_path = 'file:///' + os.path.abspath(os.path.join('static', 'Alfamart-Emblem.png'))
 
-    nama_pt = form_data.get(config.COLUMN_NAMES.NAMA_PT)
+    cabang_val = form_data.get(config.COLUMN_NAMES.CABANG)
+    
+    # 2. Panggil fungsi lookup yang baru kita buat
+    # JANGAN pakai form_data.get(config.COLUMN_NAMES.NAMA_PT) karena datanya tidak ada di form!
+    nama_pt_found = get_nama_pt_by_cabang(google_provider, cabang_val)
+    
+    # Jika masih kosong, berikan default (opsional)
+    if not nama_pt_found:
+        nama_pt_found = "NAMA PT. KONTRAKTOR TIDAK ADA" # Default jika tidak ketemu
 
     html_string = render_template(
         'pdf_report.html', 
@@ -217,7 +263,7 @@ def create_pdf_from_data(google_provider, form_data, exclude_sbo=False):
         manager_approval_details=manager_approval_details,
         format_rupiah=format_rupiah,
         tanggal_pengajuan=tanggal_pengajuan_str,
-        nama_pt=nama_pt
+        nama_pt=nama_pt_found
     )
 
     return HTML(string=html_string).write_pdf()

@@ -52,7 +52,7 @@ def get_nama_pt_by_cabang(google_provider, nama_cabang_input):
             if cabang_db and (cabang_db in input_clean or input_clean in cabang_db):
                 # Ambil kolom Nama_PT. 
                 # Pastikan di config.py: NAMA_PT = "Nama_PT" sesuai dengan HEADER DI SHEET CABANG
-                nama_pt = record.get(config.COLUMN_NAMES.NAMA_PT, '')
+                nama_pt = record.get(config.COLUMN_NAMES.Nama_PT, '')
                 
                 # Fallback jika config belum mengambil, coba hardcode string kuncinya
                 if not nama_pt:

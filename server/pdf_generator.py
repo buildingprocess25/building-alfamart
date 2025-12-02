@@ -218,15 +218,8 @@ def create_pdf_from_data(google_provider, form_data, exclude_sbo=False):
 
     logo_path = 'file:///' + os.path.abspath(os.path.join('static', 'Alfamart-Emblem.png'))
 
-    cabang_val = (
-        form_data.get(config.COLUMN_NAMES.CABANG)
-        or form_data.get('Cabang')
-        or form_data.get('cabang')
-    )
-
-    # 2. Panggil fungsi lookup yang baru kita buat
-    # JANGAN pakai form_data.get(config.COLUMN_NAMES.NAMA_PT) karena datanya tidak ada di form!
-    nama_pt_found = get_nama_pt_by_cabang(google_provider, cabang_val)
+    # Kita ambil langsung dari form_data karena app.py sudah memasukkannya
+    nama_pt_found = form_data.get(config.COLUMN_NAMES.NAMA_PT)
     
     # Jika masih kosong, berikan default (opsional)
     if not nama_pt_found:
@@ -393,6 +386,13 @@ def create_recap_pdf(google_provider, form_data):
 
     logo_path = 'file:///' + os.path.abspath(os.path.join('static', 'Alfamart-Emblem.png'))
 
+    # Kita ambil langsung dari form_data karena app.py sudah memasukkannya
+    nama_pt_found = form_data.get(config.COLUMN_NAMES.NAMA_PT)
+    
+    # Jika masih kosong, berikan default (opsional)
+    if not nama_pt_found:
+        nama_pt_found = "NAMA PT. KONTRAKTOR TIDAK ADA" # Default jika tidak ketemu
+
     html_string = render_template(
         'recap_report.html',  # <-- Template HTML baru
         data=template_data,
@@ -409,7 +409,8 @@ def create_recap_pdf(google_provider, form_data):
         grand_total_formatted=format_rupiah(grand_total_recap),
         pembulatan_formatted=format_rupiah(pembulatan),
         ppn_formatted=format_rupiah(ppn),
-        final_total_formatted=format_rupiah(final_grand_total)
+        final_total_formatted=format_rupiah(final_grand_total),
+        nama_pt=nama_pt_found
     )
     
     return HTML(string=html_string).write_pdf()

@@ -82,6 +82,24 @@ def check_status():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
+def get_pt_name_by_email(provider, email):
+    if not email: return "NAMA PT TIDAK DITEMUKAN"
+    try:
+        # Mengakses sheet Cabang
+        cabang_sheet = provider.sheet.worksheet(config.CABANG_SHEET_NAME)
+        records = cabang_sheet.get_all_records()
+        
+        # Loop cari email yang cocok
+        for record in records:
+            # Pastikan nama kolom email di sheet Cabang sesuai (misal: 'EMAIL_SAT')
+            record_email = str(record.get('EMAIL_SAT', '')).strip().lower()
+            if record_email == str(email).strip().lower():
+                # Pastikan nama kolom PT di sheet Cabang sesuai (misal: 'Nama_PT' atau 'NAMA PT')
+                return record.get('Nama_PT', '').strip() or record.get('NAMA PT', '').strip()
+    except Exception as e:
+        print(f"Error fetching PT Name: {e}")
+    return "NAMA PT TIDAK DITEMUKAN"
+
 # --- ENDPOINTS UNTUK ALUR KERJA RAB ---
 @app.route('/api/submit_rab', methods=['POST'])
 def submit_rab():
@@ -114,6 +132,15 @@ def submit_rab():
                     "sudah pernah diajukan dan sedang diproses atau sudah disetujui."
                 )
             }), 409
+
+        # 1. Ambil Email Pembuat
+        email_pembuat = data.get('Email_Pembuat')
+        
+        # 2. Cari Nama PT berdasarkan Email
+        nama_pt_kontraktor = get_pt_name_by_email(google_provider, email_pembuat)
+        
+        # 3. Masukkan ke dalam dictionary 'data' agar tersimpan di Form2 & muncul di PDF
+        data[config.COLUMN_NAMES.NAMA_PT] = nama_pt_kontraktor
 
         # Set status awal & timestamp
         WIB = timezone(timedelta(hours=7))

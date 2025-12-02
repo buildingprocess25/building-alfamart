@@ -66,9 +66,12 @@
             <img src="{{ logo_path }}" alt="Logo Alfamart" class="logo">
         </div>
         <div class="header-company">
-            <p>PT. SUMBER ALFARIA TRIJAYA, Tbk</p>
-            <p>BUILDING & MAINTENANCE DEPT</p>
-            <p>CABANG: {{ data['Cabang'] or '' }}</p>
+            {% if nama_pt %}
+                <p>{{ nama_pt }}</p>
+                {% else %}
+                    <p>NAMA PT. KONTRAKTOR TIDAK ADA</p>
+            {% endif %}
+            <p>Cabang {{ data['Cabang'] }}</p>
         </div>
         <div class="header-title">
             <h1>REKAPITULASI RENCANA ANGGARAN BIAYA</h1>

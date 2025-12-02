@@ -13,7 +13,6 @@ let pendingStoreCodes = [];
 let approvedStoreCodes = [];
 let rejectedSubmissionsList = [];
 let originalFormData = null;
-let targetRowIndex = null;
 
 const PYTHON_API_BASE_URL = "https://building-alfamart.onrender.com";
 
@@ -660,12 +659,6 @@ async function handleFormSubmit() {
       }
     });
 
-    // Kirim RowIndex ke backend jika ada (berarti ini Revisi)
-    if (targetRowIndex) {
-        data['RowIndex'] = targetRowIndex;
-        data['Is_Revision'] = true; // Flag pembantu
-    }
-
   try {
     const response = await fetch(`${PYTHON_API_BASE_URL}/api/submit_rab`, {
       method: "POST",
@@ -757,49 +750,6 @@ function updateNomorUlok() {
         document.getElementById('lokasi').value = '';
     }
 }
-
-
-function checkAndLoadRejectedData() {
-    const fullUlok = document.getElementById('lokasi').value.replace(/-/g, '');
-    const selectedScope = document.getElementById('lingkup_pekerjaan').value;
-
-    // Hanya jalan jika Ulok sudah lengkap (12 digit) DAN Lingkup sudah dipilih
-    if (fullUlok.length >= 12 && selectedScope && selectedScope !== "") {
-        
-        // Cari data yang cocok berdasarkan Ulok DAN Lingkup Pekerjaan
-        // Kita loop rejectedSubmissionsList (yang didapat dari API check_status)
-        const foundData = rejectedSubmissionsList.find(item => {
-            const itemUlok = String(item['Nomor Ulok']).replace(/-/g, '');
-            const itemScope = item['Lingkup_Pekerjaan'] || item['Lingkup Pekerjaan']; // Jaga-jaga beda penamaan key
-            
-            return itemUlok === fullUlok && itemScope === selectedScope;
-        });
-
-        if (foundData) {
-            console.log("Data Revisi Ditemukan:", foundData);
-            
-            // Simpan Row Index (PENTING: Backend harus mengirim 'RowIndex' di API check_status)
-            // Asumsi: API check_status Anda sudah menyertakan 'row_index' atau '_row_number'
-            // Jika belum ada di list, nanti kita pastikan di backend.
-            targetRowIndex = foundData.row_index || foundData.RowIndex; 
-
-            // Tampilkan notifikasi
-            const messageDiv = document.getElementById("message");
-            messageDiv.innerHTML = `Data revisi ditemukan untuk <strong>${foundData['Proyek']} (${selectedScope})</strong>. Memuat data...`;
-            messageDiv.style.display = 'block';
-            messageDiv.style.backgroundColor = '#17a2b8'; // Warna Info Teal
-
-            // Muat data ke form
-            populateFormWithHistory(foundData);
-        } else {
-            // Jika tidak ditemukan (atau user ganti lingkup ke yang baru), reset targetRowIndex
-            // Agar dianggap sebagai entry baru, bukan update
-            targetRowIndex = null;
-            // Opsional: Clear form jika ingin strict, tapi biasanya user malas isi ulang
-        }
-    }
-}
-
 
 async function initializePage() {
     form = document.getElementById("form");
@@ -912,8 +862,13 @@ async function initializePage() {
     document.getElementById('lokasi_manual').addEventListener('input', updateNomorUlok);
 
     document.getElementById('lokasi_manual')?.addEventListener('input', function(e) {
-       updateNomorUlok(); // Pastikan fungsi ini dipanggil dulu untuk update hidden value
-       checkAndLoadRejectedData(); // <--- PANGGIL FUNGSI BARU
+       const fullUlok = document.getElementById('lokasi').value.replace(/-/g, '');
+       if (fullUlok.length === 12) {
+           const rejectedData = rejectedSubmissionsList.find(item => item['Nomor Ulok'].replace(/-/g, '') === fullUlok);
+           if (rejectedData) {
+               populateFormWithHistory(rejectedData);
+           }
+       }
     });
     
     lingkupPekerjaanSelect.addEventListener("change", () => {
@@ -931,9 +886,6 @@ async function initializePage() {
         if (cabangSelect.value && lingkupPekerjaanSelect.value) {
             fetchAndPopulatePrices();
         }
-
-        checkAndLoadRejectedData();
-
     });
 
     currentResetButton.addEventListener("click", () => {

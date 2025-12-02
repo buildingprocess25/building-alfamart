@@ -133,6 +133,23 @@ def submit_rab():
                 )
             }), 409
 
+        # 1. Cek apakah ini adalah revisi dari item yang ditolak?
+        rejected_row_index = google_provider.find_rejected_row_index(
+            nomor_ulok_raw, 
+            lingkup_pekerjaan
+        )
+
+        # 2. Jika BUKAN revisi (tidak ada row rejected), pastikan tidak ada duplikat yang sedang berjalan
+        if not rejected_row_index:
+            if google_provider.check_ulok_exists(nomor_ulok_raw, lingkup_pekerjaan):
+                return jsonify({
+                    "status": "error",
+                    "message": (
+                        f"Nomor Ulok {nomor_ulok_raw} dengan lingkup {lingkup_pekerjaan} "
+                        "sudah pernah diajukan dan sedang diproses atau sudah disetujui."
+                    )
+                }), 409
+
         # 1. Ambil Email Pembuat
         email_pembuat = data.get('Email_Pembuat')
         
@@ -146,6 +163,14 @@ def submit_rab():
         WIB = timezone(timedelta(hours=7))
         data[config.COLUMN_NAMES.STATUS] = config.STATUS.WAITING_FOR_COORDINATOR
         data[config.COLUMN_NAMES.TIMESTAMP] = datetime.datetime.now(WIB).isoformat()
+
+        # PENTING: Jika Revisi, kita harus MENGOSONGKAN kolom persetujuan lama & alasan penolakan
+        # agar flow dimulai dari awal lagi di Google Sheet
+        data[config.COLUMN_NAMES.KOORDINATOR_APPROVER] = ""
+        data[config.COLUMN_NAMES.KOORDINATOR_APPROVAL_TIME] = ""
+        data[config.COLUMN_NAMES.MANAGER_APPROVER] = ""
+        data[config.COLUMN_NAMES.MANAGER_APPROVAL_TIME] = ""
+        data['Alasan Penolakan'] = ""
 
         # --- 1) HITUNG GRAND TOTAL NON-SBO (sudah ada) ---
         total_non_sbo = 0.0
@@ -232,10 +257,23 @@ def submit_rab():
         data[config.COLUMN_NAMES.LOKASI] = nomor_ulok_formatted
 
         # --- 6) SIMPAN KE SHEET ---
-        new_row_index = google_provider.append_to_sheet(
-            data,
-            config.DATA_ENTRY_SHEET_NAME
-        )
+        if rejected_row_index:
+            # === KASUS REVISI: Update Baris Lama ===
+            google_provider.update_row(
+                config.DATA_ENTRY_SHEET_NAME,
+                rejected_row_index,
+                data
+            )
+            final_row_index = rejected_row_index
+            print(f"Revisi RAB: Mengupdate baris {final_row_index}")
+        else:
+            # === KASUS BARU: Tambah Baris Baru ===
+            new_row_index = google_provider.append_to_sheet(
+                data,
+                config.DATA_ENTRY_SHEET_NAME
+            )
+            final_row_index = new_row_index
+            print(f"RAB Baru: Menambah baris {final_row_index}")
 
         # --- 7) KIRIM EMAIL KE KOORDINATOR ---
         cabang = data.get('Cabang')
@@ -255,12 +293,12 @@ def submit_rab():
         approver_for_link = coordinator_emails[0]
         approval_url = (
             f"{base_url}/api/handle_rab_approval"
-            f"?action=approve&row={new_row_index}"
+            f"?action=approve&row={final_row_index}"
             f"&level=coordinator&approver={approver_for_link}"
         )
         rejection_url = (
             f"{base_url}/api/reject_form/rab"
-            f"?row={new_row_index}&level=coordinator"
+            f"?row={final_row_index}&level=coordinator"
             f"&approver={approver_for_link}"
         )
 
@@ -285,11 +323,12 @@ def submit_rab():
 
         return jsonify({
             "status": "success",
-            "message": "Data successfully submitted and approval email sent."
+            "message": "Data successfully submitted/updated and approval email sent."
         }), 200
 
     except Exception as e:
-        if new_row_index:
+        # Hanya hapus baris jika itu adalah input BARU (bukan revisi)
+        if new_row_index and not rejected_row_index:
             google_provider.delete_row(
                 config.DATA_ENTRY_SHEET_NAME,
                 new_row_index

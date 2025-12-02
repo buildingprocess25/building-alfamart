@@ -407,7 +407,7 @@ class GoogleServiceProvider:
         except Exception as e:
             print(f"Error checking for existing ulok: {e}")
             return False
-
+    
     def is_revision(self, nomor_ulok, email_pembuat):
         try:
             normalized_ulok = str(nomor_ulok).replace("-", "")
@@ -525,4 +525,33 @@ class GoogleServiceProvider:
             return None
         except Exception as e:
             print(f"Error saat mencari email pembuat RAB untuk Ulok {nomor_ulok}: {e}")
+            return None
+        
+    def find_rejected_row_index(self, nomor_ulok, lingkup_pekerjaan):
+        """
+        Mencari index baris (integer) jika ada pengajuan dengan Ulok & Lingkup yang sama
+        namun statusnya Ditolak (REJECTED). Mengembalikan None jika tidak ada.
+        """
+        try:
+            # Normalisasi input agar pencarian akurat
+            target_ulok = str(nomor_ulok).replace("-", "").strip().upper()
+            target_lingkup = str(lingkup_pekerjaan).strip().lower()
+            
+            # Ambil semua data
+            all_records = self.data_entry_sheet.get_all_records()
+            
+            # Loop data (enumerate start=2 karena baris 1 adalah Header di Google Sheet)
+            for i, record in enumerate(all_records, start=2):
+                rec_ulok = str(record.get(config.COLUMN_NAMES.LOKASI, "")).replace("-", "").strip().upper()
+                rec_lingkup = str(record.get(config.COLUMN_NAMES.LINGKUP_PEKERJAAN, "")).strip().lower()
+                status = str(record.get(config.COLUMN_NAMES.STATUS, "")).strip()
+
+                if rec_ulok == target_ulok and rec_lingkup == target_lingkup:
+                    # Jika ditemukan data yang sama dan statusnya Ditolak
+                    if status in [config.STATUS.REJECTED_BY_COORDINATOR, config.STATUS.REJECTED_BY_MANAGER]:
+                        return i
+            
+            return None
+        except Exception as e:
+            print(f"Error searching for rejected row: {e}")
             return None

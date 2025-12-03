@@ -3,6 +3,9 @@ let form;
 let submitButton;
 let messageDiv;
 let grandTotalAmount;
+let pembulatanAmount;
+let ppnAmount;
+let finalTotalAmount;
 let lingkupPekerjaanSelect;
 let cabangSelect;
 let sipilTablesWrapper;
@@ -479,8 +482,23 @@ function calculateTotalPrice(inputElement) {
 
 const calculateGrandTotal = () => {
     let total = 0;
+    // Hitung total murni dari semua input
     document.querySelectorAll(".boq-table-body:not(.hidden) .total-harga").forEach(input => total += parseRupiah(input.value));
+    
     if (grandTotalAmount) grandTotalAmount.textContent = formatRupiah(total);
+
+    // Pembulatan turun ke kelipatan 10.000
+    const pembulatan = Math.floor(total / 10000) * 10000;
+
+    // PPN 11% (dari hasil pembulatan)
+    const ppn = pembulatan * 0.11;
+
+    // Grand Total Final
+    const finalTotal = pembulatan + ppn;
+
+    if (pembulatanAmount) pembulatanAmount.textContent = formatRupiah(pembulatan);
+    if (ppnAmount) ppnAmount.textContent = formatRupiah(ppn);
+    if (finalTotalAmount) finalTotalAmount.textContent = formatRupiah(finalTotal);
 };
 
 async function populateFormWithHistory(data) {
@@ -794,6 +812,9 @@ async function initializePage() {
     submitButton = document.getElementById("submit-button");
     messageDiv = document.getElementById("message");
     grandTotalAmount = document.getElementById("grand-total-amount");
+    pembulatanAmount = document.getElementById("pembulatan-amount");
+    ppnAmount = document.getElementById("ppn-amount");
+    finalTotalAmount = document.getElementById("final-total-amount");
     lingkupPekerjaanSelect = document.getElementById("lingkup_pekerjaan");
     cabangSelect = document.getElementById("cabang");
     sipilTablesWrapper = document.getElementById("sipil-tables-wrapper");

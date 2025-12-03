@@ -409,6 +409,7 @@ def handle_rab_approval():
         cabang = row_data.get(config.COLUMN_NAMES.CABANG)
         jenis_toko = row_data.get(config.COLUMN_NAMES.PROYEK, 'N/A')
         nama_toko = row_data.get('Nama_Toko', row_data.get('nama_toko', 'N/A'))
+        lingkup_pekerjaan = row_data.get(config.COLUMN_NAMES.LINGKUP_PEKERJAAN, 'N/A')
 
         creator_email = row_data.get(config.COLUMN_NAMES.EMAIL_PEMBUAT)
 
@@ -426,8 +427,8 @@ def handle_rab_approval():
             google_provider.update_cell(row, config.COLUMN_NAMES.STATUS, new_status)
             google_provider.update_cell(row, 'Alasan Penolakan', reason)
             if creator_email:
-                subject = f"[DITOLAK] Pengajuan RAB Proyek {nama_toko}: {jenis_toko}"
-                body = (f"<p>Pengajuan RAB untuk proyek <b>{jenis_toko}</b> telah <b>DITOLAK</b>.</p>"
+                subject = f"[DITOLAK] Pengajuan RAB Proyek {nama_toko}: {jenis_toko} - {lingkup_pekerjaan}"
+                body = (f"<p>Pengajuan RAB Toko <b>{nama_toko}</b> untuk proyek <b>{jenis_toko} - {lingkup_pekerjaan}</b> telah <b>DITOLAK</b>.</p>"
                         f"<p><b>Alasan Penolakan:</b></p>"
                         f"<p><i>{reason}</i></p>"
                         f"<p>Silakan ajukan revisi RAB Anda melalui link berikut:</p>"

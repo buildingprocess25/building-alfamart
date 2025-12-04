@@ -612,26 +612,33 @@ def get_spk_status():
     if not lingkup:
         return jsonify({"error": "Parameter lingkup kosong"}), 400
 
-    spk_sheet = google_provider.sheet.worksheet(config.SPK_DATA_SHEET_NAME)
-    records = spk_sheet.get_all_records()
+    try:
+        spk_sheet = google_provider.sheet.worksheet(config.SPK_DATA_SHEET_NAME)
+        records = spk_sheet.get_all_records()
 
-    ulok = str(ulok).strip()
-    lingkup = str(lingkup).strip().lower()
+        # --- PERBAIKAN: Normalisasi Input ---
+        target_ulok = str(ulok).replace("-", "").strip().upper()
+        target_lingkup = str(lingkup).strip().lower()
 
-    for i, row in enumerate(records, start=2):  # row 2 = data pertama
-        row_ulok = str(row.get("Nomor Ulok", "")).strip()
-        row_lingkup = str(row.get("Lingkup Pekerjaan", "")).strip().lower()
+        for i, row in enumerate(records, start=2):  # row 2 = data pertama
+            # Normalisasi data dari Sheet
+            row_ulok = str(row.get("Nomor Ulok", "")).replace("-", "").strip().upper()
+            row_lingkup = str(row.get("Lingkup Pekerjaan", "")).strip().lower()
 
-        # 🔥 Perbaikan utama: cek ULOK + Lingkup Pekerjaan
-        if row_ulok == ulok and row_lingkup == lingkup:
-            return jsonify({
-                "Status": row.get("Status"),
-                "RowIndex": i,
-                "Data": row
-            }), 200
+            # Bandingkan data yang sudah bersih
+            if row_ulok == target_ulok and row_lingkup == target_lingkup:
+                return jsonify({
+                    "Status": row.get("Status"),
+                    "RowIndex": i,
+                    "Data": row
+                }), 200
 
-    # Tidak ada SPK untuk kombinasi ULok + Lingkup → boleh submit
-    return jsonify(None), 200
+        # Tidak ada SPK untuk kombinasi ULok + Lingkup → boleh submit
+        return jsonify(None), 200
+        
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/submit_spk', methods=['POST'])
 def submit_spk():
@@ -853,7 +860,7 @@ def handle_spk_approval():
 
             other_recipients = set()
             if initiator_email: other_recipients.add(initiator_email.strip())
-            
+
             if pembuat_rab_email: other_recipients.add(pembuat_rab_email.strip())
 
             jenis_toko = row_data.get('Jenis_Toko', row_data.get('Proyek', 'N/A'))
@@ -864,7 +871,7 @@ def handle_spk_approval():
             
             email_attachments = [(final_pdf_filename, final_pdf_bytes, 'application/pdf')]
 
-            body_bm = (f"<p>SPK yang Anda setujui untuk proyek <b>{row_data.get('Proyek')} - {row_data.get('lingkup_pekerjaan')}</b> ({row_data.get('Nomor Ulok')}) telah disetujui sepenuhnya dan final.</p>"
+            body_bm = (f"<p>SPK yang Anda setujui untuk Toko <b>{nama_toko}</b> pada proyek <b>{jenis_toko} - {lingkup_pekerjaan}</b> ({row_data.get('Nomor Ulok')}) telah disetujui sepenuhnya dan final.</p>"
                        f"<p>File PDF final terlampir.</p>")
             google_provider.send_email(to=[bm_email], subject=subject, html_body=body_bm, attachments=email_attachments)
 

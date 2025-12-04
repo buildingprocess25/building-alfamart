@@ -543,23 +543,27 @@ class GoogleServiceProvider:
             rab_sheet = self.sheet.worksheet(config.DATA_ENTRY_SHEET_NAME)
             records = rab_sheet.get_all_records()
             
-            # Normalisasi input
-            target_ulok = str(nomor_ulok).strip()
+            # Mengubah "Z001-2512-D4D4-R" menjadi "Z0012512D4D4R" agar pencarian akurat
+            target_ulok = str(nomor_ulok).replace("-", "").strip().upper()
             target_lingkup = str(lingkup_pekerjaan).strip().lower() if lingkup_pekerjaan else None
 
             # Loop dari bawah (terbaru)
             for record in reversed(records):
-                rec_ulok = str(record.get('Nomor Ulok', '')).strip()
+                # Ambil Ulok dari sheet dan normalisasi juga
+                raw_ulok_sheet = str(record.get('Nomor Ulok', '')).replace("-", "").strip().upper()
                 
-                # Cek Ulok
-                if rec_ulok == target_ulok:
+                # Cek apakah Ulok cocok (setelah dinormalisasi)
+                if raw_ulok_sheet == target_ulok:
                     # Jika lingkup_pekerjaan disertakan, cek kecocokannya
                     if target_lingkup:
-                        rec_lingkup = str(record.get('Lingkup_Pekerjaan', '')).strip().lower()
+                        # Cek kolom 'Lingkup_Pekerjaan' atau 'Lingkup Pekerjaan' (antisipasi spasi header)
+                        rec_lingkup_raw = record.get('Lingkup_Pekerjaan', record.get('Lingkup Pekerjaan', ''))
+                        rec_lingkup = str(rec_lingkup_raw).strip().lower()
+                        
                         if rec_lingkup == target_lingkup:
                             return record.get(config.COLUMN_NAMES.EMAIL_PEMBUAT)
                     else:
-                        # Fallback jika tidak ada parameter lingkup (cara lama)
+                        # Fallback jika tidak ada parameter lingkup
                         return record.get(config.COLUMN_NAMES.EMAIL_PEMBUAT)
             return None
         except Exception as e:

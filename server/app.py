@@ -847,7 +847,8 @@ def handle_spk_approval():
 
             manager_email = google_provider.get_email_by_jabatan(cabang, config.JABATAN.MANAGER)
             support_emails = google_provider.get_emails_by_jabatan(cabang, config.JABATAN.SUPPORT)
-            
+            coordinator_emails = google_provider.get_emails_by_jabatan(cabang, config.JABATAN.KOORDINATOR)
+
             # Cari email spesifik pembuat RAB menggunakan Ulok DAN Lingkup Pekerjaan
             pembuat_rab_email = google_provider.get_rab_creator_by_ulok(nomor_ulok_spk, lingkup_pekerjaan) if nomor_ulok_spk else None
 
@@ -882,6 +883,16 @@ def handle_spk_approval():
                              f"<p>File PDF final terlampir.</p>")
                  google_provider.send_email(to=[bbm_manager_email], subject=subject, html_body=body_bbm, attachments=email_attachments)
                  other_recipients.discard(bbm_manager_email)
+
+            if coordinator_emails:
+                body_coord = (f"<p>SPK untuk Toko <b>{nama_toko}</b> pada proyek <b>{jenis_toko} - {lingkup_pekerjaan}</b> ({row_data.get('Nomor Ulok')}) telah disetujui oleh Branch Manager.</p>"
+                              f"<p>File PDF final terlampir.</p>")
+                
+                google_provider.send_email(to=coordinator_emails, subject=subject, html_body=body_coord, attachments=email_attachments)
+                
+                # Hapus dari other_recipients agar tidak dikirim double (jika coordinator juga initiator)
+                for email in coordinator_emails:
+                    other_recipients.discard(email)
 
             opname_recipients = set()
             opname_recipients.update(kontraktor_list)

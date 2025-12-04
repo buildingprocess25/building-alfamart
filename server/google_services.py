@@ -538,13 +538,29 @@ class GoogleServiceProvider:
             print(f"Error updating cell [{row_index}, {column_name}] in {worksheet.title}: {e}")
             return False
         
-    def get_rab_creator_by_ulok(self, nomor_ulok):
+    def get_rab_creator_by_ulok(self, nomor_ulok, lingkup_pekerjaan=None):
         try:
             rab_sheet = self.sheet.worksheet(config.DATA_ENTRY_SHEET_NAME)
             records = rab_sheet.get_all_records()
-            for record in records:
-                if record.get('Nomor Ulok') == nomor_ulok:
-                    return record.get(config.COLUMN_NAMES.EMAIL_PEMBUAT)
+            
+            # Normalisasi input
+            target_ulok = str(nomor_ulok).strip()
+            target_lingkup = str(lingkup_pekerjaan).strip().lower() if lingkup_pekerjaan else None
+
+            # Loop dari bawah (terbaru)
+            for record in reversed(records):
+                rec_ulok = str(record.get('Nomor Ulok', '')).strip()
+                
+                # Cek Ulok
+                if rec_ulok == target_ulok:
+                    # Jika lingkup_pekerjaan disertakan, cek kecocokannya
+                    if target_lingkup:
+                        rec_lingkup = str(record.get('Lingkup_Pekerjaan', '')).strip().lower()
+                        if rec_lingkup == target_lingkup:
+                            return record.get(config.COLUMN_NAMES.EMAIL_PEMBUAT)
+                    else:
+                        # Fallback jika tidak ada parameter lingkup (cara lama)
+                        return record.get(config.COLUMN_NAMES.EMAIL_PEMBUAT)
             return None
         except Exception as e:
             print(f"Error saat mencari email pembuat RAB untuk Ulok {nomor_ulok}: {e}")

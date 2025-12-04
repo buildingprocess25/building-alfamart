@@ -834,17 +834,26 @@ def handle_spk_approval():
             nomor_ulok_spk = row_data.get('Nomor Ulok')
             cabang = row_data.get('Cabang')
             
+            jenis_toko = row_data.get('Jenis_Toko', row_data.get('Proyek', 'N/A'))
+            nama_toko = row_data.get('Nama_Toko', row_data.get('nama_toko', 'N/A'))
+            lingkup_pekerjaan = row_data.get('Lingkup Pekerjaan', row_data.get('Lingkup_Pekerjaan', row_data.get('lingkup_pekerjaan', 'N/A')))
+
             manager_email = google_provider.get_email_by_jabatan(cabang, config.JABATAN.MANAGER)
-            kontraktor_emails = google_provider.get_emails_by_jabatan(cabang, config.JABATAN.KONTRAKTOR)
             support_emails = google_provider.get_emails_by_jabatan(cabang, config.JABATAN.SUPPORT)
-            pembuat_rab_email = google_provider.get_rab_creator_by_ulok(nomor_ulok_spk) if nomor_ulok_spk else None
+            
+            # Cari email spesifik pembuat RAB menggunakan Ulok DAN Lingkup Pekerjaan
+            pembuat_rab_email = google_provider.get_rab_creator_by_ulok(nomor_ulok_spk, lingkup_pekerjaan) if nomor_ulok_spk else None
 
             bm_email = approver
             bbm_manager_email = manager_email
-            kontraktor_list = kontraktor_emails
             
+            kontraktor_list = []
+            if pembuat_rab_email:
+                kontraktor_list.append(pembuat_rab_email)
+
             other_recipients = set()
             if initiator_email: other_recipients.add(initiator_email.strip())
+            
             if pembuat_rab_email: other_recipients.add(pembuat_rab_email.strip())
 
             jenis_toko = row_data.get('Jenis_Toko', row_data.get('Proyek', 'N/A'))

@@ -223,6 +223,7 @@ def submit_rab():
 
         jenis_toko = data.get('Proyek', 'N/A')
         nama_toko = data.get('Nama_Toko', data.get('nama_toko', 'N/A'))
+        lingkup_pekerjaan = data.get('Lingkup_Pekerjaan', data.get('lingkup_pekerjaan', 'N/A'))
 
         # --- LOGIC FORMATTING ULOK DIPERBARUI ---
         nomor_ulok_formatted = nomor_ulok_raw
@@ -328,7 +329,7 @@ def submit_rab():
 
         google_provider.send_email(
             to=coordinator_emails,
-            subject=f"[TAHAP 1: PERLU PERSETUJUAN] RAB Proyek {nama_toko}: {jenis_toko}",
+            subject=f"[TAHAP 1: PERLU PERSETUJUAN] RAB Proyek {nama_toko}: {jenis_toko} - {lingkup_pekerjaan}",
             html_body=email_html,
             attachments=[
                 (pdf_nonsbo_filename, pdf_nonsbo_bytes, 'application/pdf'),
@@ -513,11 +514,11 @@ def handle_rab_approval():
                 (pdf_recap_filename, pdf_recap_bytes, 'application/pdf')
             ]
 
-            subject = f"[FINAL - DISETUJUI] Pengajuan RAB Proyek {nama_toko}: {jenis_toko}"
+            subject = f"[FINAL - DISETUJUI] Pengajuan RAB Proyek {nama_toko}: {jenis_toko} - {lingkup_pekerjaan}"
 
             # Template body utama (bold + link Google Drive)
             base_body = (
-                f"<p>Pengajuan RAB untuk proyek <b>{jenis_toko}</b> di cabang <b>{cabang}</b> "
+                f"<p>Pengajuan RAB Toko <b>{nama_toko}</b> untuk proyek <b>{jenis_toko} - {lingkup_pekerjaan}</b> "
                 f"telah disetujui sepenuhnya.</p>"
                 f"<p>Tiga versi file PDF RAB telah dilampirkan:</p>"
                 f"<ul>"
@@ -666,6 +667,7 @@ def submit_spk():
         cabang = data.get('Cabang')
         nama_toko = data.get('Nama_Toko', data.get('nama_toko', 'N/A'))
         jenis_toko = data.get('Jenis_Toko', data.get('Proyek', 'N/A'))
+        lingkup_pekerjaan = data.get('Lingkup_Pekerjaan', data.get('lingkup_pekerjaan', 'N/A'))
 
         # ---- GENERATE NOMOR SPK ----
         spk_manual_1 = data.get('spk_manual_1', '')
@@ -731,7 +733,7 @@ def submit_spk():
 
         google_provider.send_email(
             to=branch_manager_email,
-            subject=f"[PERLU PERSETUJUAN BM] SPK Proyek {nama_toko}: {jenis_toko}",
+            subject=f"[PERLU PERSETUJUAN BM] SPK Proyek {nama_toko}: {jenis_toko} - {lingkup_pekerjaan}",
             html_body=email_html,
             attachments=[(pdf_filename, pdf_bytes, 'application/pdf')]
         )
@@ -843,11 +845,13 @@ def handle_spk_approval():
 
             jenis_toko = row_data.get('Jenis_Toko', row_data.get('Proyek', 'N/A'))
             nama_toko = row_data.get('Nama_Toko', row_data.get('nama_toko', 'N/A'))
-            subject = f"[DISETUJUI] SPK Proyek {nama_toko}: {jenis_toko}"
+            lingkup_pekerjaan = row_data.get('Lingkup_Pekerjaan', row_data.get('lingkup_pekerjaan', 'N/A'))
+
+            subject = f"[DISETUJUI] SPK Proyek {nama_toko}: {jenis_toko} - {lingkup_pekerjaan}"
             
             email_attachments = [(final_pdf_filename, final_pdf_bytes, 'application/pdf')]
 
-            body_bm = (f"<p>SPK yang Anda setujui untuk proyek <b>{row_data.get('Proyek')}</b> ({row_data.get('Nomor Ulok')}) telah disetujui sepenuhnya dan final.</p>"
+            body_bm = (f"<p>SPK yang Anda setujui untuk proyek <b>{row_data.get('Proyek')} - {row_data.get('lingkup_pekerjaan')}</b> ({row_data.get('Nomor Ulok')}) telah disetujui sepenuhnya dan final.</p>"
                        f"<p>File PDF final terlampir.</p>")
             google_provider.send_email(to=[bm_email], subject=subject, html_body=body_bm, attachments=email_attachments)
 
@@ -873,7 +877,7 @@ def handle_spk_approval():
                     other_recipients.discard(email)
 
             if other_recipients:
-                body_default = (f"<p>SPK yang Anda ajukan untuk proyek <b>{row_data.get('Proyek')}</b> ({row_data.get('Nomor Ulok')}) telah disetujui oleh Branch Manager.</p>"
+                body_default = (f"<p>SPK yang Anda ajukan untuk proyek <b>{row_data.get('Proyek')} - {row_data.get('lingkup_pekerjaan')}</b> ({row_data.get('Nomor Ulok')}) telah disetujui oleh Branch Manager.</p>"
                                 f"<p>File PDF final terlampir.</p>")
                 google_provider.send_email(to=list(other_recipients), subject=subject, html_body=body_default, attachments=email_attachments)
             
@@ -887,10 +891,11 @@ def handle_spk_approval():
 
             jenis_toko = row_data.get('Jenis_Toko', row_data.get('Proyek', 'N/A'))
             nama_toko = row_data.get('Nama_Toko', row_data.get('nama_toko', 'N/A'))
+            lingkup_pekerjaan = row_data.get('Lingkup_Pekerjaan', row_data.get('lingkup_pekerjaan', 'N/A'))
 
             if initiator_email:
-                subject = f"[DITOLAK] SPK untuk Proyek {nama_toko}: {jenis_toko}"
-                body = (f"<p>SPK yang Anda ajukan untuk proyek <b>{row_data.get('Proyek')}</b> ({row_data.get('Nomor Ulok')}) telah ditolak oleh Branch Manager.</p>"
+                subject = f"[DITOLAK] SPK untuk Proyek {nama_toko}: {jenis_toko} - {lingkup_pekerjaan}"
+                body = (f"<p>SPK yang Anda ajukan untuk proyek <b>{row_data.get('Proyek')} - {row_data.get('lingkup_pekerjaan')}</b> ({row_data.get('Nomor Ulok')}) telah ditolak oleh Branch Manager.</p>"
                         f"<p><b>Alasan Penolakan:</b></p>"
                         f"<p><i>{reason}</i></p>"
                         f"<p>Silakan ajukan revisi SPK Anda melalui link berikut:</p>"

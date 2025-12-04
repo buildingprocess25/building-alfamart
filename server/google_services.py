@@ -552,11 +552,12 @@ class GoogleServiceProvider:
         
     def find_rejected_row_index(self, nomor_ulok, lingkup_pekerjaan):
         """
-        Mencari index baris (integer) jika ada pengajuan dengan Ulok & Lingkup yang sama
-        namun statusnya Ditolak (REJECTED). Mengembalikan None jika tidak ada.
+        Mencari index baris (row number) dari RAB yang Ditolak berdasarkan Nomor Ulok dan Lingkup Pekerjaan.
+        Fungsi ini dikuatkan untuk menerima format ulok 12 & 13 karakter.
         """
         try:
-            # Normalisasi input agar pencarian akurat
+            # 1. Cleaning input agar pencarian akurat
+            # Nomor Ulok (baik Z001-2512-0001 maupun Z001-2512-C0B4-R akan diubah menjadi Z00125120001 atau Z0012512C0B4R)
             target_ulok = str(nomor_ulok).replace("-", "").strip().upper()
             target_lingkup = str(lingkup_pekerjaan).strip().lower()
             
@@ -565,12 +566,22 @@ class GoogleServiceProvider:
             
             # Loop data (enumerate start=2 karena baris 1 adalah Header di Google Sheet)
             for i, record in enumerate(all_records, start=2):
+                # Ambil & bersihkan Nomor Ulok dari Sheet
                 rec_ulok = str(record.get(config.COLUMN_NAMES.LOKASI, "")).replace("-", "").strip().upper()
-                rec_lingkup = str(record.get(config.COLUMN_NAMES.LINGKUP_PEKERJAAN, "")).strip().lower()
+                
+                # --- PERBAIKAN: Robust search untuk Lingkup Pekerjaan ---
+                # Cek dari config key (Lingkup_Pekerjaan) dan fallback ke 'Lingkup Pekerjaan' (spasi)
+                rec_lingkup_raw = record.get(
+                    config.COLUMN_NAMES.LINGKUP_PEKERJAAN, # Key dari config (mungkin Lingkup_Pekerjaan)
+                    record.get('Lingkup Pekerjaan', '')     # Fallback jika sheet pakai spasi
+                ) 
+                rec_lingkup = str(rec_lingkup_raw).strip().lower()
+                # --------------------------------------------------------
+
                 status = str(record.get(config.COLUMN_NAMES.STATUS, "")).strip()
 
+                # Pastikan kedua kriteria cocok DAN statusnya Ditolak
                 if rec_ulok == target_ulok and rec_lingkup == target_lingkup:
-                    # Jika ditemukan data yang sama dan statusnya Ditolak
                     if status in [config.STATUS.REJECTED_BY_COORDINATOR, config.STATUS.REJECTED_BY_MANAGER]:
                         return i
             
@@ -578,7 +589,7 @@ class GoogleServiceProvider:
         except Exception as e:
             print(f"Error searching for rejected row: {e}")
             return None
-        
+            
     def _get_col_letter(self, n):
         """Mengubah angka indeks kolom menjadi huruf Excel (misal: 1->A, 27->AA)"""
         string = ""

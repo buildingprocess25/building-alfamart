@@ -224,13 +224,26 @@ def submit_rab():
         jenis_toko = data.get('Proyek', 'N/A')
         nama_toko = data.get('Nama_Toko', data.get('nama_toko', 'N/A'))
 
+        # --- LOGIC FORMATTING ULOK DIPERBARUI ---
         nomor_ulok_formatted = nomor_ulok_raw
-        if isinstance(nomor_ulok_raw, str) and len(nomor_ulok_raw) == 12:
-            nomor_ulok_formatted = (
-                f"{nomor_ulok_raw[:4]}-"
-                f"{nomor_ulok_raw[4:8]}-"
-                f"{nomor_ulok_raw[8:]}"
-            )
+        if isinstance(nomor_ulok_raw, str):
+            clean_ulok = nomor_ulok_raw.replace("-", "") # Bersihkan dash dulu
+            
+            if len(clean_ulok) == 13 and clean_ulok.endswith('R'):
+                # Format Renovasi: XXXX-YYYY-ZZZZ-R
+                nomor_ulok_formatted = (
+                    f"{clean_ulok[:4]}-"
+                    f"{clean_ulok[4:8]}-"
+                    f"{clean_ulok[8:12]}-"
+                    f"{clean_ulok[12:]}"
+                )
+            elif len(clean_ulok) == 12:
+                # Format Normal: XXXX-YYYY-ZZZZ
+                nomor_ulok_formatted = (
+                    f"{clean_ulok[:4]}-"
+                    f"{clean_ulok[4:8]}-"
+                    f"{clean_ulok[8:]}"
+                )
 
         # --- 5) GENERATE PDF (NON-SBO & REKAP) ---
         pdf_nonsbo_bytes = create_pdf_from_data(

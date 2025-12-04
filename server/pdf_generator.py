@@ -212,9 +212,19 @@ def create_pdf_from_data(google_provider, form_data, exclude_sbo=False):
         tanggal_pengajuan_str = str(timestamp_from_data).split(" ")[0] if timestamp_from_data else ''
     
     template_data = form_data.copy()
+    # --- UPDATE LOGIC FORMATTING ---
     nomor_ulok_raw = template_data.get(config.COLUMN_NAMES.LOKASI, '')
-    if isinstance(nomor_ulok_raw, str) and len(nomor_ulok_raw) == 12:
-        template_data[config.COLUMN_NAMES.LOKASI] = f"{nomor_ulok_raw[:4]}-{nomor_ulok_raw[4:8]}-{nomor_ulok_raw[8:]}"
+    if isinstance(nomor_ulok_raw, str):
+        clean_ulok = nomor_ulok_raw.replace("-", "")
+        
+        if len(clean_ulok) == 13 and clean_ulok.endswith('R'):
+             template_data[config.COLUMN_NAMES.LOKASI] = (
+                f"{clean_ulok[:4]}-{clean_ulok[4:8]}-{clean_ulok[8:12]}-{clean_ulok[12:]}"
+            )
+        elif len(clean_ulok) == 12:
+            template_data[config.COLUMN_NAMES.LOKASI] = (
+                f"{clean_ulok[:4]}-{clean_ulok[4:8]}-{clean_ulok[8:]}"
+            )
 
     logo_path = 'file:///' + os.path.abspath(os.path.join('static', 'Alfamart-Emblem.png'))
 
@@ -381,8 +391,19 @@ def create_recap_pdf(google_provider, form_data):
     
     # Format Nomor Ulok (jika perlu)
     nomor_ulok_raw = template_data.get(config.COLUMN_NAMES.LOKASI, '')
-    if isinstance(nomor_ulok_raw, str) and len(nomor_ulok_raw) == 12:
-        template_data[config.COLUMN_NAMES.LOKASI] = f"{nomor_ulok_raw[:4]}-{nomor_ulok_raw[4:8]}-{nomor_ulok_raw[8:]}"
+    # --- UPDATE LOGIC FORMATTING ---
+    nomor_ulok_raw = template_data.get(config.COLUMN_NAMES.LOKASI, '')
+    if isinstance(nomor_ulok_raw, str):
+        clean_ulok = nomor_ulok_raw.replace("-", "")
+        
+        if len(clean_ulok) == 13 and clean_ulok.endswith('R'):
+             template_data[config.COLUMN_NAMES.LOKASI] = (
+                f"{clean_ulok[:4]}-{clean_ulok[4:8]}-{clean_ulok[8:12]}-{clean_ulok[12:]}"
+            )
+        elif len(clean_ulok) == 12:
+            template_data[config.COLUMN_NAMES.LOKASI] = (
+                f"{clean_ulok[:4]}-{clean_ulok[4:8]}-{clean_ulok[8:]}"
+            )
 
     logo_path = 'file:///' + os.path.abspath(os.path.join('static', 'Alfamart-Emblem.png'))
 

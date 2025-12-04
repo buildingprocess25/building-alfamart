@@ -16,6 +16,9 @@ let pendingStoreCodes = [];
 let approvedStoreCodes = [];
 let rejectedSubmissionsList = [];
 let originalFormData = null;
+let toggleRenovasi;
+let separatorRenov;
+let suffixRenov;
 
 const PYTHON_API_BASE_URL = "https://building-alfamart.onrender.com";
 
@@ -507,12 +510,40 @@ async function populateFormWithHistory(data) {
   meTablesWrapper.innerHTML = "";
 
   const nomorUlok = data["Nomor Ulok"];
-  if (nomorUlok && (nomorUlok.length === 12 || nomorUlok.length === 14)) {
-    const ulokParts = nomorUlok.replace(/-/g, "").match(/^(.{4})(.{4})(.{4})$/);
+  if (nomorUlok) {
+    const cleanUlok = nomorUlok.replace(/-/g, ""); // Hapus dash jika ada
+    
+    // Cek panjang karakter
+    // Format Normal: Z001 2512 0001 (12 chars)
+    // Format Renov:  Z001 2512 C0B4 R (13 chars)
+    
+    let ulokParts;
+    const isRenov = cleanUlok.length === 13 && cleanUlok.endsWith("R");
+
+    if (isRenov) {
+        // Regex untuk Z001-2512-C0B4-R
+        ulokParts = cleanUlok.match(/^(.{4})(.{4})(.{4})R$/);
+    } else {
+        // Regex untuk Z001-2512-0001
+        ulokParts = cleanUlok.match(/^(.{4})(.{4})(.{4})$/);
+    }
+
     if (ulokParts) {
       document.getElementById("lokasi_cabang").value = ulokParts[1];
       document.getElementById("lokasi_tanggal").value = ulokParts[2];
       document.getElementById("lokasi_manual").value = ulokParts[3];
+
+      // Set status checkbox
+      const toggleBox = document.getElementById("toggle_renovasi");
+      if(isRenov) {
+          toggleBox.checked = true;
+          // Trigger event change manual agar UI suffix muncul
+          toggleBox.dispatchEvent(new Event('change')); 
+      } else {
+          toggleBox.checked = false;
+          toggleBox.dispatchEvent(new Event('change'));
+      }
+      
       updateNomorUlok();
     }
   }
@@ -760,9 +791,17 @@ function updateNomorUlok() {
     const kodeCabang = document.getElementById('lokasi_cabang').value;
     const tanggalInput = document.getElementById('lokasi_tanggal').value;
     const manualValue = document.getElementById('lokasi_manual').value;
+    const isRenovasi = document.getElementById('toggle_renovasi').checked;
 
+    // Pastikan input manual panjangnya 4 karakter
     if (kodeCabang && tanggalInput.length === 4 && manualValue.length === 4) {
-        const nomorUlok = `${kodeCabang}${tanggalInput}${manualValue}`;
+        let nomorUlok = `${kodeCabang}${tanggalInput}${manualValue}`;
+        
+        // Jika mode renovasi aktif, tambahkan 'R'
+        if (isRenovasi) {
+            nomorUlok += "R";
+        }
+        
         document.getElementById('lokasi').value = nomorUlok;
     } else {
         document.getElementById('lokasi').value = '';
@@ -820,6 +859,42 @@ async function initializePage() {
     sipilTablesWrapper = document.getElementById("sipil-tables-wrapper");
     meTablesWrapper = document.getElementById("me-tables-wrapper");
     currentResetButton = form.querySelector("button[type='reset']");
+    toggleRenovasi = document.getElementById('toggle_renovasi');
+    separatorRenov = document.getElementById('separator_renov');
+    suffixRenov = document.getElementById('suffix_renov');
+    const inputManual = document.getElementById('lokasi_manual');
+    
+    // --- LOGIKA 1: Event Listener Checkbox Renovasi ---
+    toggleRenovasi.addEventListener('change', () => {
+        if (toggleRenovasi.checked) {
+            // Mode Renovasi: Tampilkan 'R', Input Manual jadi Alphanumeric
+            separatorRenov.style.display = 'inline';
+            suffixRenov.style.display = 'block';
+            inputManual.placeholder = "C0B4"; // Contoh alphanumeric
+        } else {
+            // Mode Normal: Sembunyikan 'R', Input Manual jadi Numeric Only
+            separatorRenov.style.display = 'none';
+            suffixRenov.style.display = 'none';
+            inputManual.placeholder = "0001"; // Contoh numeric
+            
+            // Bersihkan huruf jika user switch kembali ke normal
+            inputManual.value = inputManual.value.replace(/[^0-9]/g, '');
+        }
+        updateNomorUlok();
+    });
+
+    // --- LOGIKA 2: Validasi Input Manual (Dinamis) ---
+    inputManual.addEventListener('input', function() {
+        if (toggleRenovasi.checked) {
+            // Allow Angka & Huruf (Alphanumeric)
+            this.value = this.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+        } else {
+            // Allow Angka Saja (Numeric)
+            this.value = this.value.replace(/[^0-9]/g, '');
+        }
+        updateNomorUlok();
+        checkAndPopulateRejectedData();
+    });
 
     const userEmail = sessionStorage.getItem('loggedInUserEmail');
     const userCabang = sessionStorage.getItem('loggedInUserCabang')?.toUpperCase();

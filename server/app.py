@@ -466,7 +466,7 @@ def handle_rab_approval():
                 pdf_recap_bytes = create_recap_pdf(google_provider, row_data)
                 pdf_nonsbo_filename = f"RAB_NON-SBO_{jenis_toko}_{row_data.get('Nomor Ulok')}.pdf"
                 pdf_recap_filename = f"REKAP_RAB_{jenis_toko}_{row_data.get('Nomor Ulok')}.pdf"
-                google_provider.send_email(manager_email, f"[TAHAP 2: PERLU PERSETUJUAN] RAB Proyek {nama_toko}: {jenis_toko}", email_html_manager, attachments=[(pdf_nonsbo_filename, pdf_nonsbo_bytes, 'application/pdf'),(pdf_recap_filename, pdf_recap_bytes, 'application/pdf')])
+                google_provider.send_email(manager_email, f"[TAHAP 2: PERLU PERSETUJUAN] RAB Proyek {nama_toko}: {jenis_toko} - {lingkup_pekerjaan}", email_html_manager, attachments=[(pdf_nonsbo_filename, pdf_nonsbo_bytes, 'application/pdf'),(pdf_recap_filename, pdf_recap_bytes, 'application/pdf')])
             return render_template('response_page.html', title='Persetujuan Diteruskan', message='Terima kasih. Persetujuan Anda telah dicatat.', logo_url=logo_url)
         
         elif level == 'manager' and action == 'approve':
@@ -667,7 +667,11 @@ def submit_spk():
         cabang = data.get('Cabang')
         nama_toko = data.get('Nama_Toko', data.get('nama_toko', 'N/A'))
         jenis_toko = data.get('Jenis_Toko', data.get('Proyek', 'N/A'))
-        lingkup_pekerjaan = data.get('Lingkup_Pekerjaan', data.get('lingkup_pekerjaan', 'N/A'))
+        lingkup_pekerjaan = data.get('Lingkup Pekerjaan', data.get('Lingkup_Pekerjaan', data.get('lingkup_pekerjaan', 'N/A')))
+
+
+        data['Nama_Toko'] = nama_toko
+        data['Lingkup Pekerjaan'] = lingkup_pekerjaan
 
         # ---- GENERATE NOMOR SPK ----
         spk_manual_1 = data.get('spk_manual_1', '')
@@ -845,7 +849,7 @@ def handle_spk_approval():
 
             jenis_toko = row_data.get('Jenis_Toko', row_data.get('Proyek', 'N/A'))
             nama_toko = row_data.get('Nama_Toko', row_data.get('nama_toko', 'N/A'))
-            lingkup_pekerjaan = row_data.get('Lingkup_Pekerjaan', row_data.get('lingkup_pekerjaan', 'N/A'))
+            lingkup_pekerjaan = row_data.get('Lingkup Pekerjaan', row_data.get('Lingkup_Pekerjaan', row_data.get('lingkup_pekerjaan', 'N/A')))
 
             subject = f"[DISETUJUI] SPK Proyek {nama_toko}: {jenis_toko} - {lingkup_pekerjaan}"
             
@@ -857,7 +861,7 @@ def handle_spk_approval():
 
             if bbm_manager_email:
                  link_input_pic = f"<p>Silakan melakukan input PIC pengawasan melalui link berikut: <a href='https://frontend-form-virid.vercel.app/login-input_pic.html' target='_blank' rel='noopener noreferrer'>Input PIC Pengawasan</a></p>"
-                 body_bbm = (f"<p>SPK yang diajukan untuk proyek <b>{row_data.get('Proyek')}</b> ({row_data.get('Nomor Ulok')}) telah disetujui oleh Branch Manager.</p>"
+                 body_bbm = (f"<p>SPK yang diajukan untuk Toko <b>{nama_toko}</b> pada proyek <b>{jenis_toko} - {lingkup_pekerjaan}</b> ({row_data.get('Nomor Ulok')}) telah disetujui oleh Branch Manager.</p>"
                              f"{link_input_pic}"
                              f"<p>File PDF final terlampir.</p>")
                  google_provider.send_email(to=[bbm_manager_email], subject=subject, html_body=body_bbm, attachments=email_attachments)
@@ -868,7 +872,7 @@ def handle_spk_approval():
             
             if opname_recipients:
                 link_opname = f"<p>Silakan melakukan Opname melalui link berikut: <a href='https://opnamebnm.vercel.app/' target='_blank' rel='noopener noreferrer'>Pengisian Opname</a></p>"
-                body_opname = (f"<p>SPK untuk proyek <b>{row_data.get('Proyek')}</b> ({row_data.get('Nomor Ulok')}) telah disetujui.</p>"
+                body_opname = (f"<p>SPK untuk Toko <b>{nama_toko}</b> pada proyek <b>{jenis_toko} - {lingkup_pekerjaan}</b> ({row_data.get('Nomor Ulok')}) telah disetujui.</p>"
                                f"{link_opname}"
                                f"<p>File PDF final terlampir.</p>")
                 google_provider.send_email(to=list(opname_recipients), subject=subject, html_body=body_opname, attachments=email_attachments)
@@ -877,7 +881,7 @@ def handle_spk_approval():
                     other_recipients.discard(email)
 
             if other_recipients:
-                body_default = (f"<p>SPK yang Anda ajukan untuk proyek <b>{row_data.get('Proyek')} - {row_data.get('lingkup_pekerjaan')}</b> ({row_data.get('Nomor Ulok')}) telah disetujui oleh Branch Manager.</p>"
+                body_default = (f"<p>SPK yang Anda ajukan untuk Toko <b>{nama_toko}</b> pada proyek <b>{jenis_toko} - {lingkup_pekerjaan}</b> ({row_data.get('Nomor Ulok')}) telah disetujui oleh Branch Manager.</p>"
                                 f"<p>File PDF final terlampir.</p>")
                 google_provider.send_email(to=list(other_recipients), subject=subject, html_body=body_default, attachments=email_attachments)
             
@@ -889,13 +893,13 @@ def handle_spk_approval():
             
             google_provider.update_cell_by_sheet(spk_sheet, row_index, 'Alasan Penolakan', reason)
 
-            jenis_toko = row_data.get('Jenis_Toko', row_data.get('Proyek', 'N/A'))
             nama_toko = row_data.get('Nama_Toko', row_data.get('nama_toko', 'N/A'))
-            lingkup_pekerjaan = row_data.get('Lingkup_Pekerjaan', row_data.get('lingkup_pekerjaan', 'N/A'))
+            jenis_toko = row_data.get('Jenis_Toko', row_data.get('Proyek', 'N/A'))
+            lingkup_pekerjaan = row_data.get('Lingkup Pekerjaan', row_data.get('Lingkup_Pekerjaan', row_data.get('lingkup_pekerjaan', 'N/A')))
 
             if initiator_email:
                 subject = f"[DITOLAK] SPK untuk Proyek {nama_toko}: {jenis_toko} - {lingkup_pekerjaan}"
-                body = (f"<p>SPK yang Anda ajukan untuk proyek <b>{row_data.get('Proyek')} - {row_data.get('lingkup_pekerjaan')}</b> ({row_data.get('Nomor Ulok')}) telah ditolak oleh Branch Manager.</p>"
+                body = (f"<p>SPK yang Anda ajukan untuk Toko <b>{nama_toko}</b> pada proyek <b>{jenis_toko} - {lingkup_pekerjaan}</b> ({row_data.get('Nomor Ulok')}) telah ditolak oleh Branch Manager.</p>"
                         f"<p><b>Alasan Penolakan:</b></p>"
                         f"<p><i>{reason}</i></p>"
                         f"<p>Silakan ajukan revisi SPK Anda melalui link berikut:</p>"

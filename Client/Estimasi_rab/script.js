@@ -531,8 +531,7 @@ async function populateFormWithHistory(data) {
     if (ulokParts) {
       document.getElementById("lokasi_cabang").value = ulokParts[1];
       document.getElementById("lokasi_tanggal").value = ulokParts[2];
-      document.getElementById("lokasi_manual").value = ulokParts[3];
-
+        
       // Set status checkbox
       const toggleBox = document.getElementById("toggle_renovasi");
       if(isRenov) {
@@ -543,6 +542,8 @@ async function populateFormWithHistory(data) {
           toggleBox.checked = false;
           toggleBox.dispatchEvent(new Event('change'));
       }
+      
+      document.getElementById("lokasi_manual").value = ulokParts[3];
       
       updateNomorUlok();
     }
@@ -815,8 +816,9 @@ function checkAndPopulateRejectedData() {
     // 2. Ambil Lingkup Pekerjaan
     const selectedScope = document.getElementById('lingkup_pekerjaan').value;
 
-    // Jika Ulok belum lengkap (12 digit) atau Lingkup belum dipilih, hentikan
-    if (fullUlok.length !== 12 || !selectedScope) {
+    // PERBAIKAN: Izinkan panjang 12 (Reguler) ATAU 13 (Renovasi)
+    // Jika panjang bukan 12 DAN bukan 13, atau lingkup belum dipilih, hentikan.
+    if ((fullUlok.length !== 12 && fullUlok.length !== 13) || !selectedScope) {
         return;
     }
 
@@ -824,7 +826,7 @@ function checkAndPopulateRejectedData() {
     // Syarat: Ulok Sama DAN Lingkup Pekerjaan Sama
     const rejectedData = rejectedSubmissionsList.find(item => {
         const itemUlok = item['Nomor Ulok'].replace(/-/g, '');
-        const itemScope = item['Lingkup_Pekerjaan'] || item['Lingkup Pekerjaan']; // jaga-jaga beda key
+        const itemScope = item['Lingkup_Pekerjaan'] || item['Lingkup Pekerjaan']; 
         
         return itemUlok === fullUlok && itemScope === selectedScope;
     });
@@ -833,14 +835,12 @@ function checkAndPopulateRejectedData() {
     if (rejectedData) {
         console.log("Data revisi ditemukan:", rejectedData);
         
-        // Tampilkan konfirmasi ke user agar tidak kaget form berubah
         if (confirm(`Ditemukan data REVISI untuk Ulok ${rejectedData['Nomor Ulok']} (${selectedScope}) yang ditolak. \nApakah Anda ingin memuat data tersebut untuk diperbaiki?`)) {
             populateFormWithHistory(rejectedData);
             
-            // Tampilkan pesan
             const msgDiv = document.getElementById("message");
             msgDiv.textContent = `Memuat data revisi untuk ${selectedScope}. Silakan perbaiki item yang salah.`;
-            msgDiv.style.backgroundColor = '#ffc107'; // Kuning
+            msgDiv.style.backgroundColor = '#ffc107'; 
             msgDiv.style.display = 'block';
         }
     }
@@ -1009,6 +1009,7 @@ async function initializePage() {
         checkAndPopulateRejectedData(); 
     });
 
+    /*
     document.getElementById('lokasi_manual')?.addEventListener('input', function(e) {
        const fullUlok = document.getElementById('lokasi').value.replace(/-/g, '');
        if (fullUlok.length === 12) {
@@ -1018,7 +1019,8 @@ async function initializePage() {
            }
        }
     });
-    
+    */
+
     // 4. Saat Lingkup Pekerjaan berubah
     lingkupPekerjaanSelect.addEventListener("change", () => {
         const selectedScope = lingkupPekerjaanSelect.value;

@@ -620,18 +620,28 @@ def get_spk_status():
         target_ulok = str(ulok).replace("-", "").strip().upper()
         target_lingkup = str(lingkup).strip().lower()
 
+        found_record = None
+        found_index = -1
+
         for i, row in enumerate(records, start=2):  # row 2 = data pertama
             # Normalisasi data dari Sheet
-            row_ulok = str(row.get("Nomor Ulok", "")).replace("-", "").strip().upper()
-            row_lingkup = str(row.get("Lingkup Pekerjaan", "")).strip().lower()
+            row_ulok_raw = str(row.get("Nomor Ulok", ""))
+            row_ulok = row_ulok_raw.replace("-", "").strip().upper()
 
-            # Bandingkan data yang sudah bersih
+            # Handle variasi nama kolom Lingkup
+            row_lingkup_raw = row.get("Lingkup Pekerjaan", row.get("Lingkup_Pekerjaan", ""))
+            row_lingkup = str(row_lingkup_raw).strip().lower()
+
             if row_ulok == target_ulok and row_lingkup == target_lingkup:
-                return jsonify({
-                    "Status": row.get("Status"),
-                    "RowIndex": i,
-                    "Data": row
-                }), 200
+                found_record = row
+                found_index = i
+
+        if found_record:
+            return jsonify({
+                "Status": found_record.get("Status"),
+                "RowIndex": found_index,
+                "Data": found_record
+            }), 200
 
         # Tidak ada SPK untuk kombinasi ULok + Lingkup → boleh submit
         return jsonify(None), 200

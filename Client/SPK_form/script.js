@@ -245,11 +245,135 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  async function checkSpkStatus(nomorUlok) {
-    const res = await fetch(`${PYTHON_API_BASE_URL}/api/get_spk_status?ulok=${nomorUlok}`);
-    if (!res.ok) return null;
-    return await res.json(); 
+  async function checkSpkStatus(nomorUlok, lingkupPekerjaan) {
+    if (!nomorUlok || !lingkupPekerjaan) return null;
+    try {
+      const url = `${PYTHON_API_BASE_URL}/api/get_spk_status?ulok=${encodeURIComponent(
+        nomorUlok
+      )}&lingkup=${encodeURIComponent(lingkupPekerjaan)}`;
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      return await res.json();
+    } catch (err) {
+      console.error("Gagal cek status SPK:", err);
+      return null;
+    }
   }
+
+  // Fungsi Baru: Auto-fill form jika status Ditolak
+  function fillFormWithRejectedData(data) {
+    showMessage("Mengambil data revisi (SPK Ditolak)...", "info");
+
+    // 1. Isi Tanggal Mulai & Durasi
+    if (data["Waktu Mulai"]) {
+      // Ambil YYYY-MM-DD saja (antisipasi format ISO lengkap)
+      document.getElementById("waktu_mulai").value = data["Waktu Mulai"].split("T")[0];
+    }
+    if (data["Durasi"]) {
+      document.getElementById("durasi").value = data["Durasi"];
+    }
+
+    // 2. Parsing Nomor SPK
+    // Format: 001/PROPNDEV-KZ01/III/25  atau (Otomatis)/PROPNDEV-KZ01/III/25
+    // Split berdasarkan '/'
+    const spkFull = data["Nomor SPK"] || "";
+    const spkParts = spkFull.split("/");
+    
+    // Asumsi format standar 4 bagian: [Nomor] [PROPNDEV-Cabang] [Bulan] [Tahun]
+    if (spkParts.length >= 4) {
+      // Index 2 = Bulan (Romawi), Index 3 = Tahun
+      document.getElementById("spk_manual_1").value = spkParts[2]; 
+      document.getElementById("spk_manual_2").value = spkParts[3]; 
+    }
+
+    // 3. Parsing PAR
+    // Format: 0001/PROPNDEV-KZ01-III-25
+    // Split pertama by '/' -> [0001] [PROPNDEV-KZ01-III-25]
+    const parFull = data["PAR"] || "";
+    const parPartsSlash = parFull.split("/");
+
+    if (parPartsSlash.length >= 2) {
+      // Bagian depan adalah Nomor Urut PAR
+      document.getElementById("par_manual_1").value = parPartsSlash[0];
+
+      // Bagian belakang dipisah by '-' -> [PROPNDEV] [KZ01] [III] [25]
+      const suffixParts = parPartsSlash[1].split("-");
+      if (suffixParts.length >= 4) {
+         // suffixParts[suffixParts.length - 2] = Bulan
+         // suffixParts[suffixParts.length - 1] = Tahun
+         const len = suffixParts.length;
+         document.getElementById("par_manual_2").value = suffixParts[len - 2];
+         document.getElementById("par_manual_3").value = suffixParts[len - 1];
+      }
+    }
+  }
+
+  // --- REVISI EVENT LISTENER ulokSelect ---
+  ulokSelect.addEventListener("change", async () => {
+    const selectedValue = ulokSelect.value;
+    // Reset form fields manual dulu agar bersih
+    document.getElementById("spk_manual_1").value = "";
+    document.getElementById("spk_manual_2").value = "";
+    document.getElementById("par_manual_1").value = "";
+    document.getElementById("par_manual_2").value = "";
+    document.getElementById("par_manual_3").value = "";
+    document.getElementById("waktu_mulai").value = "";
+    document.getElementById("durasi").value = "";
+    showMessage("", "none"); // Hapus pesan lama
+
+    const selectedUlok = selectedValue.split(" (")[0];
+    const selectedLingkup = selectedValue.includes("(")
+      ? selectedValue.split("(")[1].replace(")", "")
+      : null;
+
+    const selectedRab = approvedRabData.find(
+      (rab) =>
+        rab["Nomor Ulok"] === selectedUlok &&
+        rab["Lingkup_Pekerjaan"] === selectedLingkup
+    );
+
+    if (selectedRab) {
+      const namaToko = selectedRab["Nama_Toko"] || selectedRab["nama_toko"] || "N/A";
+
+      document.getElementById("detail_proyek").textContent = selectedRab.Proyek || "N/A";
+      detailNamaTokoSpan.textContent = namaToko;
+      namaTokoInput.value = namaToko;
+      
+      document.getElementById("detail_lingkup").textContent = selectedRab.Lingkup_Pekerjaan || "N/A";
+      document.getElementById("detail_total").textContent = formatRupiah(
+        selectedRab["Grand Total Final"] || 0
+      );
+
+      rabDetailsDiv.style.display = "block";
+      fetchKontraktor(selectedRab.Cabang);
+      setCabangCode(selectedRab.Cabang);
+
+      // --- LOGIKA BARU: Cek Status SPK Ditolak & Autofill ---
+      if (selectedUlok && selectedLingkup) {
+        showMessage("Mengecek status SPK...", "info");
+        const spkStatus = await checkSpkStatus(selectedUlok, selectedLingkup);
+        
+        if (spkStatus) {
+            if (spkStatus.Status === "SPK Ditolak") {
+                showMessage("SPK sebelumnya DITOLAK. Data lama telah dimuat untuk revisi.", "error"); // Pakai warna merah/error agar notice
+                fillFormWithRejectedData(spkStatus.Data);
+            } else if (spkStatus.Status === "Menunggu Persetujuan Branch Manager") {
+                showMessage("SPK sedang dalam proses persetujuan.", "info");
+            } else if (spkStatus.Status === "SPK Disetujui") {
+                showMessage("SPK sudah disetujui.", "success");
+            }
+        } else {
+             showMessage("Silakan lengkapi form untuk pengajuan SPK baru.", "info");
+        }
+      }
+
+    } else {
+      rabDetailsDiv.style.display = "none";
+      kontraktorSelect.innerHTML = '<option value="">-- Pilih RAB terlebih dahulu --</option>';
+      const userCabang = sessionStorage.getItem("loggedInUserCabang");
+      setCabangCode(userCabang);
+    }
+  });
 
   async function handleFormSubmit(e) {
     e.preventDefault();
@@ -425,7 +549,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function checkSessionTime() {
     try {
       const startHour = 6;
-      const endHour = 18;
+      const endHour = 21;
 
       const now = new Date();
       const options = {

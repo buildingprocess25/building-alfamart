@@ -260,47 +260,55 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Fungsi Baru: Auto-fill form jika status Ditolak
+  // Auto-fill form jika status Ditolak
   function fillFormWithRejectedData(data) {
     showMessage("Mengambil data revisi (SPK Ditolak)...", "info");
 
     // 1. Isi Tanggal Mulai & Durasi
     if (data["Waktu Mulai"]) {
-      // Ambil YYYY-MM-DD saja (antisipasi format ISO lengkap)
       document.getElementById("waktu_mulai").value = data["Waktu Mulai"].split("T")[0];
     }
     if (data["Durasi"]) {
       document.getElementById("durasi").value = data["Durasi"];
     }
 
-    // 2. Parsing Nomor SPK
-    // Format: 001/PROPNDEV-KZ01/III/25  atau (Otomatis)/PROPNDEV-KZ01/III/25
-    // Split berdasarkan '/'
+    // 2. Isi Nama Kontraktor
+    // Pastikan nama kolom di Google Sheet sesuai (biasanya 'Nama Kontraktor' atau 'Nama_Kontraktor')
+    const namaKontraktor = data["Nama Kontraktor"] || data["Nama_Kontraktor"];
+    if (namaKontraktor) {
+        const kontraktorSelect = document.getElementById("nama_kontraktor");
+        kontraktorSelect.value = namaKontraktor;
+    }
+
+    // 3. Parsing Nomor SPK untuk mendapatkan Nomor Urut Lama
+    // Format: 001/PROPNDEV-KZ01/III/25
     const spkFull = data["Nomor SPK"] || "";
-    const spkParts = spkFull.split("/");
+    const spkParts = spkFull.split("/"); 
     
-    // Asumsi format standar 4 bagian: [Nomor] [PROPNDEV-Cabang] [Bulan] [Tahun]
     if (spkParts.length >= 4) {
+      // Index 0 = Nomor Urut (misal: 001)
+      const nomorUrut = spkParts[0]; 
+      
+      // Update UI: Ganti tulisan "(Otomatis)" dengan Nomor Urut asli
+      const spkLabel = document.getElementById("spk_auto_number");
+      spkLabel.textContent = `${nomorUrut} /PROPNDEV-`;
+      
+      // Simpan nomor urut ini di dataset form untuk dipakai saat submit
+      document.getElementById("spk-form").dataset.revisiSequence = nomorUrut;
+
       // Index 2 = Bulan (Romawi), Index 3 = Tahun
       document.getElementById("spk_manual_1").value = spkParts[2]; 
       document.getElementById("spk_manual_2").value = spkParts[3]; 
     }
 
-    // 3. Parsing PAR
-    // Format: 0001/PROPNDEV-KZ01-III-25
-    // Split pertama by '/' -> [0001] [PROPNDEV-KZ01-III-25]
+    // 4. Parsing PAR (sama seperti sebelumnya)
     const parFull = data["PAR"] || "";
     const parPartsSlash = parFull.split("/");
 
     if (parPartsSlash.length >= 2) {
-      // Bagian depan adalah Nomor Urut PAR
       document.getElementById("par_manual_1").value = parPartsSlash[0];
-
-      // Bagian belakang dipisah by '-' -> [PROPNDEV] [KZ01] [III] [25]
       const suffixParts = parPartsSlash[1].split("-");
       if (suffixParts.length >= 4) {
-         // suffixParts[suffixParts.length - 2] = Bulan
-         // suffixParts[suffixParts.length - 1] = Tahun
          const len = suffixParts.length;
          document.getElementById("par_manual_2").value = suffixParts[len - 2];
          document.getElementById("par_manual_3").value = suffixParts[len - 1];
@@ -311,7 +319,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- REVISI EVENT LISTENER ulokSelect ---
   ulokSelect.addEventListener("change", async () => {
     const selectedValue = ulokSelect.value;
-    // Reset form fields manual dulu agar bersih
+    
+    // Reset form fields
     document.getElementById("spk_manual_1").value = "";
     document.getElementById("spk_manual_2").value = "";
     document.getElementById("par_manual_1").value = "";
@@ -319,7 +328,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById("par_manual_3").value = "";
     document.getElementById("waktu_mulai").value = "";
     document.getElementById("durasi").value = "";
-    showMessage("", "none"); // Hapus pesan lama
+    
+    // RESET Label SPK ke default "(Otomatis)" dan hapus dataset revisi
+    document.getElementById("spk_auto_number").textContent = "(Otomatis) /PROPNDEV-";
+    delete document.getElementById("spk-form").dataset.revisiSequence;
+
+    showMessage("", "none"); 
 
     const selectedUlok = selectedValue.split(" (")[0];
     const selectedLingkup = selectedValue.includes("(")
@@ -345,17 +359,20 @@ document.addEventListener('DOMContentLoaded', () => {
       );
 
       rabDetailsDiv.style.display = "block";
-      fetchKontraktor(selectedRab.Cabang);
       setCabangCode(selectedRab.Cabang);
 
-      // --- LOGIKA BARU: Cek Status SPK Ditolak & Autofill ---
+      // --- PENTING: Tunggu fetchKontraktor selesai dulu ---
+      await fetchKontraktor(selectedRab.Cabang);
+
+      // --- Baru cek status Revisi ---
       if (selectedUlok && selectedLingkup) {
         showMessage("Mengecek status SPK...", "info");
         const spkStatus = await checkSpkStatus(selectedUlok, selectedLingkup);
         
         if (spkStatus) {
             if (spkStatus.Status === "SPK Ditolak") {
-                showMessage("SPK sebelumnya DITOLAK. Data lama telah dimuat untuk revisi.", "error"); // Pakai warna merah/error agar notice
+                showMessage("SPK sebelumnya DITOLAK. Data lama telah dimuat untuk revisi.", "error");
+                // Sekarang aman memanggil ini karena kontraktor options sudah ada
                 fillFormWithRejectedData(spkStatus.Data);
             } else if (spkStatus.Status === "Menunggu Persetujuan Branch Manager") {
                 showMessage("SPK sedang dalam proses persetujuan.", "info");
@@ -389,13 +406,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const data = Object.fromEntries(formData.entries());
     data["Dibuat Oleh"] = sessionStorage.getItem("loggedInUserEmail");
 
-    // ===== Ambil Nomor Ulok & Lingkup =====
     const ulokFromForm = data["Nomor Ulok"].split(" (")[0];
     const lingkupFromForm = data["Nomor Ulok"].includes("(")
       ? data["Nomor Ulok"].split("(")[1].replace(")", "")
       : null;
 
-    // ===== Ambil Approved RAB untuk isi field SPK =====
     const selectedRab = approvedRabData.find(
       (rab) =>
         rab["Nomor Ulok"] === ulokFromForm &&
@@ -408,68 +423,60 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // ====== CEK STATUS SPK EXISTING ======
+    // Cek status lagi untuk memastikan RowIndex
     let spkStatus = null;
-
     try {
-      // 🔥 Kirim ULok + Lingkup ke backend
       const res = await fetch(
-        `${PYTHON_API_BASE_URL}/api/get_spk_status?ulok=${encodeURIComponent(
-          ulokFromForm
-        )}&lingkup=${encodeURIComponent(lingkupFromForm)}`
+        `${PYTHON_API_BASE_URL}/api/get_spk_status?ulok=${encodeURIComponent(ulokFromForm)}&lingkup=${encodeURIComponent(lingkupFromForm)}`
       );
-
       spkStatus = await res.json();
     } catch (err) {
       console.error("Gagal cek status SPK:", err);
     }
 
-    // ====== Aturan Pengecekan ======
     if (spkStatus && spkStatus.Status) {
       const status = spkStatus.Status;
-
       if (status === "Menunggu Persetujuan Branch Manager") {
-        showMessage(
-          "SPK untuk kombinasi Nomor Ulok & Lingkup ini sedang menunggu persetujuan Branch Manager. Tidak bisa mengirim ulang.",
-          "error"
-        );
-        submitButton.disabled = false;
-        return;
+        showMessage("SPK sedang diproses. Tidak bisa kirim ulang.", "error");
+        submitButton.disabled = false; return;
       }
-
       if (status === "SPK Disetujui") {
-        showMessage(
-          "SPK untuk kombinasi Nomor Ulok & Lingkup ini sudah disetujui. Tidak bisa membuat SPK baru.",
-          "error"
-        );
-        submitButton.disabled = false;
-        return;
+        showMessage("SPK sudah disetujui.", "error");
+        submitButton.disabled = false; return;
       }
-
       if (status === "SPK Ditolak") {
-        // MODE REVISI
         data["Revisi"] = "YES";
         data["RowIndex"] = spkStatus.RowIndex;
       }
     }
 
-    // ====== Isi Data SPK (tetap sama) ======
+    // --- ISI DATA SPK ---
     data["Nomor Ulok"] = ulokFromForm;
     data["Proyek"] = selectedRab.Proyek;
     data["Alamat"] = selectedRab.Alamat;
     data["Lingkup Pekerjaan"] = selectedRab.Lingkup_Pekerjaan;
     data["Grand Total"] = selectedRab["Grand Total Final"];
     data["Cabang"] = selectedRab.Cabang;
-    data["Nama_Toko"] =
-      selectedRab["Nama_Toko"] || selectedRab["nama_toko"] || "N/A";
+    data["Nama_Toko"] = selectedRab["Nama_Toko"] || selectedRab["nama_toko"] || "N/A";
 
-    const cabangCode =
-      branchToUlokMap[selectedRab.Cabang.toUpperCase()] || selectedRab.Cabang;
+    const cabangCode = branchToUlokMap[selectedRab.Cabang.toUpperCase()] || selectedRab.Cabang;
 
-    data["Nomor SPK"] = `(Otomatis)/PROPNDEV-${cabangCode}/${data.spk_manual_1}/${data.spk_manual_2}`;
+    // --- LOGIKA PENOMORAN SPK DIPERBAIKI ---
+    // Cek apakah ada sequence revisi yang tersimpan
+    const revisiSequence = form.dataset.revisiSequence;
+
+    if (revisiSequence && data["Revisi"] === "YES") {
+        // KASUS REVISI: Gunakan nomor urut lama (misal: "005")
+        // Hasil: 005/PROPNDEV-Z001/XI/25
+        data["Nomor SPK"] = `${revisiSequence}/PROPNDEV-${cabangCode}/${data.spk_manual_1}/${data.spk_manual_2}`;
+    } else {
+        // KASUS BARU: Gunakan placeholder (Otomatis) yang nanti diganti backend
+        data["Nomor SPK"] = `(Otomatis)/PROPNDEV-${cabangCode}/${data.spk_manual_1}/${data.spk_manual_2}`;
+    }
+
     data["PAR"] = `${data.par_manual_1}/PROPNDEV-${cabangCode}-${data.par_manual_2}-${data.par_manual_3}`;
 
-    // ====== Submit ke Backend ======
+    // Submit ke Backend
     try {
       const response = await fetch(`${PYTHON_API_BASE_URL}/api/submit_spk`, {
         method: "POST",
@@ -482,6 +489,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (response.ok && result.status === "success") {
         showMessage("SPK berhasil dikirim!", "success");
         form.reset();
+        delete form.dataset.revisiSequence; // Hapus data revisi
         rabDetailsDiv.style.display = "none";
         setTimeout(() => window.location.reload(), 2000);
       } else {

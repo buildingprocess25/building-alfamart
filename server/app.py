@@ -118,39 +118,24 @@ def submit_rab():
                 "message": "Nomor Ulok tidak boleh kosong."
             }), 400
 
-        # Cek revisi / duplikasi
-        # Tambahkan parameter lingkup_pekerjaan ke fungsi is_revision
-        is_revising = google_provider.is_revision(
-            nomor_ulok_raw,
-            data.get('Email_Pembuat'),
-            lingkup_pekerjaan
-        )
-
-        if not is_revising and google_provider.check_ulok_exists(nomor_ulok_raw, lingkup_pekerjaan):
+        # 1. Cek Duplikasi AKTIF (Waiting / Approved)
+        # Jika ditemukan data yang sedang berjalan dengan ULOK & LINGKUP sama, BLOKIR.
+        # Fungsi ini sekarang sudah support format Renovasi (13 digit) & New Store (12 digit).
+        if google_provider.check_ulok_exists(nomor_ulok_raw, lingkup_pekerjaan):
             return jsonify({
                 "status": "error",
                 "message": (
-                    f"Nomor Ulok {nomor_ulok_raw} dengan lingkup {lingkup_pekerjaan} "
+                    f"RAB untuk Nomor Ulok {nomor_ulok_raw} dengan lingkup {lingkup_pekerjaan} "
                     "sudah pernah diajukan dan sedang diproses atau sudah disetujui."
                 )
             }), 409
 
-        # 1. Cek apakah ini adalah revisi dari item yang ditolak?
+        # 2. Cek apakah ini REVISI (Data Ditolak)
+        # Jika lolos cek nomor 1, kita cari apakah ada data DITOLAK yang bisa ditimpa.
         rejected_row_index = google_provider.find_rejected_row_index(
             nomor_ulok_raw, 
             lingkup_pekerjaan
         )
-
-        # 2. Jika BUKAN Revisi (input baru), cek apakah data sudah ada yang Aktif?
-        if not rejected_row_index:
-            if google_provider.check_ulok_exists(nomor_ulok_raw, lingkup_pekerjaan):
-                return jsonify({
-                    "status": "error",
-                    "message": (
-                        f"RAB untuk Nomor Ulok {nomor_ulok_raw} dengan lingkup {lingkup_pekerjaan} "
-                        "sudah pernah diajukan dan sedang diproses atau sudah disetujui."
-                    )
-                }), 409
 
         # 1. Ambil Email Pembuat
         email_pembuat = data.get('Email_Pembuat')

@@ -402,8 +402,9 @@ class GoogleServiceProvider:
     
     def _normalize_ulok(self, ulok_string):
         """
-        Helper internal untuk membersihkan format Nomor Ulok.
-        Mengubah 'Z001-2512-D4D4-R' atau 'Z001 - 2512 - 0001' menjadi 'Z0012512D4D4R' / 'Z00125120001'
+        Membersihkan format Nomor Ulok.
+        Z001-2512-D4D4-R  -> Z0012512D4D4R
+        Z001 - 2512 - 0001 -> Z00125120001
         """
         if not ulok_string:
             return ""
@@ -411,12 +412,12 @@ class GoogleServiceProvider:
 
     def _normalize_lingkup(self, lingkup_string):
         """
-        Helper internal untuk menyamakan format Lingkup Pekerjaan.
-        Menganggap 'PEKERJAAN SIPIL' sama dengan 'SIPIL'.
+        Menyamakan format Lingkup Pekerjaan.
+        PEKERJAAN SIPIL -> SIPIL
+        MEKANIKAL -> ME
         """
         if not lingkup_string:
             return ""
-        # Ambil kata kuncinya saja (SIPIL atau ME atau M.E)
         clean = str(lingkup_string).strip().upper()
         if "SIPIL" in clean:
             return "SIPIL"
@@ -426,21 +427,21 @@ class GoogleServiceProvider:
     
     def check_ulok_exists(self, nomor_ulok_to_check, lingkup_pekerjaan_to_check):
         """
-        Mengecek duplikasi di Sheet RAB (Data Entry Sheet).
-        Berlaku untuk New Store & Renovasi.
+        Mengecek apakah RAB sudah ada dan sedang AKTIF (Waiting atau Approved).
+        Jika fungsi ini return True, berarti user TIDAK BOLEH submit (Duplicate).
         """
         try:
             target_ulok = self._normalize_ulok(nomor_ulok_to_check)
             target_lingkup = self._normalize_lingkup(lingkup_pekerjaan_to_check)
             
-            # Ambil semua data RAB
             all_records = self.data_entry_sheet.get_all_records()
             
             for record in all_records:
                 status = str(record.get(config.COLUMN_NAMES.STATUS, "")).strip()
                 
-                # Cek hanya jika statusnya AKTIF (Sedang proses atau Disetujui)
-                # Jika status DITOLAK, user boleh submit ulang (revisi)
+                # Cek hanya status AKTIF.
+                # Jika status DITOLAK, fungsi ini akan mengabaikannya (return False untuk row itu),
+                # sehingga kode di app.py bisa lanjut mengecek apakah ini Revisi.
                 active_statuses = [
                     config.STATUS.WAITING_FOR_COORDINATOR, 
                     config.STATUS.WAITING_FOR_MANAGER, 
@@ -448,15 +449,19 @@ class GoogleServiceProvider:
                 ]
 
                 if status in active_statuses:
-                    # Ambil data dari row
+                    # Ambil data dari row & Normalisasi
                     rec_ulok_raw = str(record.get(config.COLUMN_NAMES.LOKASI, ""))
-                    rec_lingkup_raw = record.get(config.COLUMN_NAMES.LINGKUP_PEKERJAAN, record.get('Lingkup Pekerjaan', ''))
+                    
+                    # Robust: Cek key 'Lingkup_Pekerjaan' (config) DAN 'Lingkup Pekerjaan' (header spasi)
+                    rec_lingkup_raw = record.get(
+                        config.COLUMN_NAMES.LINGKUP_PEKERJAAN, 
+                        record.get('Lingkup Pekerjaan', '')
+                    )
 
-                    # Normalisasi data row
                     rec_ulok = self._normalize_ulok(rec_ulok_raw)
                     rec_lingkup = self._normalize_lingkup(rec_lingkup_raw)
 
-                    # Bandingkan
+                    # Bandingkan data yang sudah bersih
                     if rec_ulok == target_ulok and rec_lingkup == target_lingkup:
                         print(f"Duplikasi RAB Ditemukan: {target_ulok} ({target_lingkup})")
                         return True
@@ -655,39 +660,29 @@ class GoogleServiceProvider:
         
     def find_rejected_row_index(self, nomor_ulok, lingkup_pekerjaan):
         """
-        Mencari index baris (row number) dari RAB yang Ditolak berdasarkan Nomor Ulok dan Lingkup Pekerjaan.
-        Fungsi ini dikuatkan untuk menerima format ulok 12 & 13 karakter.
+        Mencari index baris data yang DITOLAK untuk keperluan Revisi.
         """
         try:
-            # 1. Cleaning input agar pencarian akurat
-            # Nomor Ulok (baik Z001-2512-0001 maupun Z001-2512-C0B4-R akan diubah menjadi Z00125120001 atau Z0012512C0B4R)
-            target_ulok = str(nomor_ulok).replace("-", "").strip().upper()
-            target_lingkup = str(lingkup_pekerjaan).strip().lower()
+            target_ulok = self._normalize_ulok(nomor_ulok)
+            target_lingkup = self._normalize_lingkup(lingkup_pekerjaan)
             
-            # Ambil semua data
             all_records = self.data_entry_sheet.get_all_records()
             
-            # Loop data (enumerate start=2 karena baris 1 adalah Header di Google Sheet)
             for i, record in enumerate(all_records, start=2):
-                # Ambil & bersihkan Nomor Ulok dari Sheet
-                rec_ulok = str(record.get(config.COLUMN_NAMES.LOKASI, "")).replace("-", "").strip().upper()
-                
-                # --- PERBAIKAN: Robust search untuk Lingkup Pekerjaan ---
-                # Cek dari config key (Lingkup_Pekerjaan) dan fallback ke 'Lingkup Pekerjaan' (spasi)
-                rec_lingkup_raw = record.get(
-                    config.COLUMN_NAMES.LINGKUP_PEKERJAAN, # Key dari config (mungkin Lingkup_Pekerjaan)
-                    record.get('Lingkup Pekerjaan', '')     # Fallback jika sheet pakai spasi
-                ) 
-                rec_lingkup = str(rec_lingkup_raw).strip().lower()
-                # --------------------------------------------------------
-
                 status = str(record.get(config.COLUMN_NAMES.STATUS, "")).strip()
 
-                # Pastikan kedua kriteria cocok DAN statusnya Ditolak
-                if rec_ulok == target_ulok and rec_lingkup == target_lingkup:
-                    if status in [config.STATUS.REJECTED_BY_COORDINATOR, config.STATUS.REJECTED_BY_MANAGER]:
+                if status in [config.STATUS.REJECTED_BY_COORDINATOR, config.STATUS.REJECTED_BY_MANAGER]:
+                    rec_ulok_raw = str(record.get(config.COLUMN_NAMES.LOKASI, ""))
+                    rec_lingkup_raw = record.get(
+                        config.COLUMN_NAMES.LINGKUP_PEKERJAAN, 
+                        record.get('Lingkup Pekerjaan', '')
+                    )
+
+                    rec_ulok = self._normalize_ulok(rec_ulok_raw)
+                    rec_lingkup = self._normalize_lingkup(rec_lingkup_raw)
+
+                    if rec_ulok == target_ulok and rec_lingkup == target_lingkup:
                         return i
-            
             return None
         except Exception as e:
             print(f"Error searching for rejected row: {e}")

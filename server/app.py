@@ -662,6 +662,32 @@ def submit_spk():
     new_row_index = None  # Untuk mode tambah baris
 
     try:
+        if not is_revision:
+            incoming_ulok = str(data.get("Nomor Ulok", "")).replace("-", "").replace(" ", "").strip().upper()
+            incoming_lingkup = str(data.get("Lingkup Pekerjaan", "")).strip().lower()
+
+            # Ambil semua data SPK yang ada
+            spk_sheet = google_provider.sheet.worksheet(config.SPK_DATA_SHEET_NAME)
+            all_records = spk_sheet.get_all_records()
+
+            for record in all_records:
+                existing_ulok = str(record.get("Nomor Ulok", "")).replace("-", "").replace(" ", "").strip().upper()
+                
+                rec_lingkup_raw = record.get("Lingkup Pekerjaan", record.get("Lingkup_Pekerjaan", ""))
+                existing_lingkup = str(rec_lingkup_raw).strip().lower()
+                
+                status = str(record.get("Status", "")).strip()
+
+                if incoming_ulok == existing_ulok and incoming_lingkup == existing_lingkup:
+                    if status != config.STATUS.SPK_REJECTED:
+                        return jsonify({
+                            "status": "error",
+                            "message": (
+                                f"SPK untuk Ulok {data.get('Nomor Ulok')} dengan lingkup {data.get('Lingkup Pekerjaan')} "
+                                "sudah pernah diajukan dan sedang diproses atau sudah disetujui."
+                            )
+                        }), 409
+
         WIB = timezone(timedelta(hours=7))
         now = datetime.datetime.now(WIB)
 
@@ -686,21 +712,17 @@ def submit_spk():
         jenis_toko = data.get('Jenis_Toko', data.get('Proyek', 'N/A'))
         lingkup_pekerjaan = data.get('Lingkup Pekerjaan', data.get('Lingkup_Pekerjaan', data.get('lingkup_pekerjaan', 'N/A')))
 
-
         data['Nama_Toko'] = nama_toko
         data['Lingkup Pekerjaan'] = lingkup_pekerjaan
 
-        # ---- GENERATE NOMOR SPK ----
         spk_manual_1 = data.get('spk_manual_1', '')
         spk_manual_2 = data.get('spk_manual_2', '')
         cabang_code = google_provider.get_cabang_code(cabang)
 
-        # Sequence hanya dipakai saat SPK BARU
         if not is_revision:
             spk_sequence = google_provider.get_next_spk_sequence(cabang, now.year, now.month)
             full_spk_number = f"{spk_sequence:03d}/PROPNDEV-{cabang_code}/{spk_manual_1}/{spk_manual_2}"
         else:
-            # Untuk revisi → nomor SPK lama dipertahankan
             full_spk_number = data.get("Nomor SPK")
 
         data['Nomor SPK'] = full_spk_number
@@ -715,9 +737,6 @@ def submit_spk():
         )
         data['Link PDF'] = pdf_link
 
-        # ==============================================
-        #  MODE REVISI (UPDATE baris lama)
-        # ==============================================
         if is_revision and row_index_for_update:
             google_provider.update_row(
                 config.SPK_DATA_SHEET_NAME,
@@ -726,9 +745,6 @@ def submit_spk():
             )
             row_to_notify = int(row_index_for_update)
         else:
-            # ==============================================
-            #  MODE NORMAL (TAMBAH BARIS BARU)
-            # ==============================================
             new_row_index = google_provider.append_to_sheet(data, config.SPK_DATA_SHEET_NAME)
             row_to_notify = new_row_index
 
@@ -762,7 +778,6 @@ def submit_spk():
         return jsonify({"status": "success", "message": "SPK successfully submitted for approval."}), 200
 
     except Exception as e:
-        # Jika submit baris baru gagal, hapus row
         if new_row_index:
             google_provider.delete_row(config.SPK_DATA_SHEET_NAME, new_row_index)
 

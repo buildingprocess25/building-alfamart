@@ -402,15 +402,28 @@ class GoogleServiceProvider:
     
     def check_ulok_exists(self, nomor_ulok_to_check, lingkup_pekerjaan_to_check):
         try:
-            normalized_ulok = str(nomor_ulok_to_check).replace("-", "")
+            # 1. Normalisasi INPUT (Hapus dash, Uppercase, Hapus spasi)
+            # Contoh: "z001-2512-d4d4-r" -> "Z0012512D4D4R"
+            target_ulok = str(nomor_ulok_to_check).replace("-", "").strip().upper()
+            target_lingkup = str(lingkup_pekerjaan_to_check).strip().upper()
+            
             all_records = self.data_entry_sheet.get_all_records()
+            
             for record in all_records:
-                status = record.get(config.COLUMN_NAMES.STATUS, "").strip()
+                status = str(record.get(config.COLUMN_NAMES.STATUS, "")).strip()
+                
                 if status in [config.STATUS.WAITING_FOR_COORDINATOR, config.STATUS.WAITING_FOR_MANAGER, config.STATUS.APPROVED]:
-                    existing_ulok = str(record.get(config.COLUMN_NAMES.LOKASI, "")).replace("-", "")
-                    existing_lingkup = str(record.get(config.COLUMN_NAMES.LINGKUP_PEKERJAAN, "")).strip()
-                    if existing_ulok == normalized_ulok and existing_lingkup == lingkup_pekerjaan_to_check:
+                    
+                    rec_ulok_raw = str(record.get(config.COLUMN_NAMES.LOKASI, ""))
+                    rec_ulok = rec_ulok_raw.replace("-", "").strip().upper()
+                    
+                    rec_lingkup_raw = record.get(config.COLUMN_NAMES.LINGKUP_PEKERJAAN, record.get('Lingkup Pekerjaan', ''))
+                    rec_lingkup = str(rec_lingkup_raw).strip().upper()
+
+                    if rec_ulok == target_ulok and rec_lingkup == target_lingkup:
+                        print(f"Duplikasi ditemukan: {target_ulok} - {target_lingkup}")
                         return True
+                        
             return False
         except Exception as e:
             print(f"Error checking for existing ulok: {e}")

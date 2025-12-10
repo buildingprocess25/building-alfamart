@@ -400,33 +400,103 @@ class GoogleServiceProvider:
         except Exception as e:
             raise e
     
+    def _normalize_ulok(self, ulok_string):
+        """
+        Helper internal untuk membersihkan format Nomor Ulok.
+        Mengubah 'Z001-2512-D4D4-R' atau 'Z001 - 2512 - 0001' menjadi 'Z0012512D4D4R' / 'Z00125120001'
+        """
+        if not ulok_string:
+            return ""
+        return str(ulok_string).replace("-", "").replace(" ", "").strip().upper()
+
+    def _normalize_lingkup(self, lingkup_string):
+        """
+        Helper internal untuk menyamakan format Lingkup Pekerjaan.
+        Menganggap 'PEKERJAAN SIPIL' sama dengan 'SIPIL'.
+        """
+        if not lingkup_string:
+            return ""
+        # Ambil kata kuncinya saja (SIPIL atau ME atau M.E)
+        clean = str(lingkup_string).strip().upper()
+        if "SIPIL" in clean:
+            return "SIPIL"
+        if "ME" in clean or "M.E" in clean or "MEKANIKAL" in clean:
+            return "ME"
+        return clean
+    
     def check_ulok_exists(self, nomor_ulok_to_check, lingkup_pekerjaan_to_check):
+        """
+        Mengecek duplikasi di Sheet RAB (Data Entry Sheet).
+        Berlaku untuk New Store & Renovasi.
+        """
         try:
-            # 1. Normalisasi INPUT (Hapus dash, Uppercase, Hapus spasi)
-            # Contoh: "z001-2512-d4d4-r" -> "Z0012512D4D4R"
-            target_ulok = str(nomor_ulok_to_check).replace("-", "").strip().upper()
-            target_lingkup = str(lingkup_pekerjaan_to_check).strip().upper()
+            target_ulok = self._normalize_ulok(nomor_ulok_to_check)
+            target_lingkup = self._normalize_lingkup(lingkup_pekerjaan_to_check)
             
+            # Ambil semua data RAB
             all_records = self.data_entry_sheet.get_all_records()
             
             for record in all_records:
                 status = str(record.get(config.COLUMN_NAMES.STATUS, "")).strip()
                 
-                if status in [config.STATUS.WAITING_FOR_COORDINATOR, config.STATUS.WAITING_FOR_MANAGER, config.STATUS.APPROVED]:
-                    
-                    rec_ulok_raw = str(record.get(config.COLUMN_NAMES.LOKASI, ""))
-                    rec_ulok = rec_ulok_raw.replace("-", "").strip().upper()
-                    
-                    rec_lingkup_raw = record.get(config.COLUMN_NAMES.LINGKUP_PEKERJAAN, record.get('Lingkup Pekerjaan', ''))
-                    rec_lingkup = str(rec_lingkup_raw).strip().upper()
+                # Cek hanya jika statusnya AKTIF (Sedang proses atau Disetujui)
+                # Jika status DITOLAK, user boleh submit ulang (revisi)
+                active_statuses = [
+                    config.STATUS.WAITING_FOR_COORDINATOR, 
+                    config.STATUS.WAITING_FOR_MANAGER, 
+                    config.STATUS.APPROVED
+                ]
 
+                if status in active_statuses:
+                    # Ambil data dari row
+                    rec_ulok_raw = str(record.get(config.COLUMN_NAMES.LOKASI, ""))
+                    rec_lingkup_raw = record.get(config.COLUMN_NAMES.LINGKUP_PEKERJAAN, record.get('Lingkup Pekerjaan', ''))
+
+                    # Normalisasi data row
+                    rec_ulok = self._normalize_ulok(rec_ulok_raw)
+                    rec_lingkup = self._normalize_lingkup(rec_lingkup_raw)
+
+                    # Bandingkan
                     if rec_ulok == target_ulok and rec_lingkup == target_lingkup:
-                        print(f"Duplikasi ditemukan: {target_ulok} - {target_lingkup}")
+                        print(f"Duplikasi RAB Ditemukan: {target_ulok} ({target_lingkup})")
                         return True
                         
             return False
         except Exception as e:
-            print(f"Error checking for existing ulok: {e}")
+            print(f"Error checking for existing RAB ulok: {e}")
+            return False
+
+    def check_spk_exists(self, nomor_ulok_to_check, lingkup_pekerjaan_to_check):
+        """
+        Mengecek duplikasi di Sheet SPK (SPK_Data).
+        Memastikan Manager tidak submit SPK ganda untuk Ulok + Lingkup yang sama.
+        """
+        try:
+            target_ulok = self._normalize_ulok(nomor_ulok_to_check)
+            target_lingkup = self._normalize_lingkup(lingkup_pekerjaan_to_check)
+
+            spk_sheet = self.sheet.worksheet(config.SPK_DATA_SHEET_NAME)
+            all_records = spk_sheet.get_all_records()
+
+            for record in all_records:
+                status = str(record.get("Status", "")).strip()
+
+                # Cek jika statusnya BUKAN Ditolak (artinya sedang Waiting BM atau Sudah Approved)
+                if status != config.STATUS.SPK_REJECTED:
+                    
+                    rec_ulok_raw = str(record.get("Nomor Ulok", ""))
+                    rec_lingkup_raw = record.get("Lingkup Pekerjaan", record.get("Lingkup_Pekerjaan", ""))
+
+                    rec_ulok = self._normalize_ulok(rec_ulok_raw)
+                    rec_lingkup = self._normalize_lingkup(rec_lingkup_raw)
+
+                    if rec_ulok == target_ulok and rec_lingkup == target_lingkup:
+                        print(f"Duplikasi SPK Ditemukan: {target_ulok} ({target_lingkup}) status {status}")
+                        return True
+            
+            return False
+        except Exception as e:
+            print(f"Error checking for existing SPK ulok: {e}")
             return False
     
     def is_revision(self, nomor_ulok, email_pembuat, lingkup_pekerjaan=None):

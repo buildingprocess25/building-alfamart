@@ -141,13 +141,13 @@ def submit_rab():
             lingkup_pekerjaan
         )
 
-        # 2. Jika BUKAN revisi (tidak ada row rejected), pastikan tidak ada duplikat yang sedang berjalan
+        # 2. Jika BUKAN Revisi (input baru), cek apakah data sudah ada yang Aktif?
         if not rejected_row_index:
             if google_provider.check_ulok_exists(nomor_ulok_raw, lingkup_pekerjaan):
                 return jsonify({
                     "status": "error",
                     "message": (
-                        f"Nomor Ulok {nomor_ulok_raw} dengan lingkup {lingkup_pekerjaan} "
+                        f"RAB untuk Nomor Ulok {nomor_ulok_raw} dengan lingkup {lingkup_pekerjaan} "
                         "sudah pernah diajukan dan sedang diproses atau sudah disetujui."
                     )
                 }), 409
@@ -663,8 +663,19 @@ def submit_spk():
 
     try:
         if not is_revision:
-            incoming_ulok = str(data.get("Nomor Ulok", "")).replace("-", "").replace(" ", "").strip().upper()
-            incoming_lingkup = str(data.get("Lingkup Pekerjaan", "")).strip().lower()
+            incoming_ulok = data.get("Nomor Ulok", "")
+            incoming_lingkup = data.get("Lingkup Pekerjaan", "")
+
+            is_duplicate = google_provider.check_spk_exists(incoming_ulok, incoming_lingkup)
+
+            if is_duplicate:
+                return jsonify({
+                    "status": "error",
+                    "message": (
+                        f"SPK untuk Ulok {incoming_ulok} dengan lingkup {incoming_lingkup} "
+                        "sudah pernah diajukan dan sedang diproses (Menunggu BM) atau sudah disetujui."
+                    )
+                }), 409
 
             # Ambil semua data SPK yang ada
             spk_sheet = google_provider.sheet.worksheet(config.SPK_DATA_SHEET_NAME)

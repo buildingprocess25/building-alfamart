@@ -87,6 +87,7 @@ def create_spk_pdf(google_provider, spk_data):
         "proyek": spk_data.get('Proyek'),
         "project_address": spk_data.get('Alamat'),
         "nama_toko": spk_data.get('Nama_Toko'),
+        "kode_toko": spk_data.get('Nomor Ulok', 'N/A'),
         "total_cost_formatted": total_cost_formatted,
         "terbilang": terbilang,
         "start_date": start_date_formatted,

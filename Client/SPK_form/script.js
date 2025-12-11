@@ -271,6 +271,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (data["Durasi"]) {
       document.getElementById("durasi").value = data["Durasi"];
     }
+    if (data["Kode Toko"]) {
+        document.getElementById("kode_toko").value = data["Kode Toko"];
+    }
 
     // 2. Isi Nama Kontraktor
     // Pastikan nama kolom di Google Sheet sesuai (biasanya 'Nama Kontraktor' atau 'Nama_Kontraktor')
@@ -328,6 +331,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById("par_manual_3").value = "";
     document.getElementById("waktu_mulai").value = "";
     document.getElementById("durasi").value = "";
+    document.getElementById("kode_toko").value = "";
     
     // RESET Label SPK ke default "(Otomatis)" dan hapus dataset revisi
     document.getElementById("spk_auto_number").textContent = "(Otomatis) /PROPNDEV-";
@@ -360,6 +364,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
       rabDetailsDiv.style.display = "block";
       setCabangCode(selectedRab.Cabang);
+
+      if (selectedUlok && selectedUlok.length >= 4) {
+             // Ambil 4 huruf pertama, bersihkan jika ada dash
+             const potentialCode = selectedUlok.substring(0, 4).replace("-", "");
+             document.getElementById("kode_toko").value = potentialCode;
+        }
 
       // --- PENTING: Tunggu fetchKontraktor selesai dulu ---
       await fetchKontraktor(selectedRab.Cabang);
@@ -510,7 +520,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Listener bawaan kamu tetap di bawahnya
-  ulokSelect.addEventListener("change", () => {
+  ulokSelect.addEventListener("change", async () => {
     const selectedValue = ulokSelect.value;
     const selectedUlok = selectedValue.split(" (")[0];
     const selectedLingkup = selectedValue.includes("(")

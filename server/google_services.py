@@ -695,3 +695,26 @@ class GoogleServiceProvider:
             n, remainder = divmod(n - 1, 26)
             string = chr(65 + remainder) + string
         return string
+    
+    def ensure_header_exists(self, sheet_name, header_name):
+        """
+        Mengecek apakah header tertentu ada di baris 1.
+        Jika tidak ada, tambahkan kolom baru di akhir header.
+        """
+        try:
+            worksheet = self.sheet.worksheet(sheet_name)
+            headers = worksheet.row_values(1)
+            
+            # Cek case-insensitive
+            headers_lower = [h.strip().lower() for h in headers]
+            
+            if header_name.strip().lower() not in headers_lower:
+                print(f"Header '{header_name}' tidak ditemukan di {sheet_name}. Menambahkan kolom baru...")
+                # Tambahkan di kolom setelah kolom terakhir
+                new_col_index = len(headers) + 1
+                worksheet.update_cell(1, new_col_index, header_name)
+                return True
+            return False
+        except Exception as e:
+            print(f"Error ensuring header exists: {e}")
+            return False

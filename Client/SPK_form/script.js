@@ -365,12 +365,6 @@ document.addEventListener('DOMContentLoaded', () => {
       rabDetailsDiv.style.display = "block";
       setCabangCode(selectedRab.Cabang);
 
-      if (selectedUlok && selectedUlok.length >= 4) {
-             // Ambil 4 huruf pertama, bersihkan jika ada dash
-             const potentialCode = selectedUlok.substring(0, 4).replace("-", "");
-             document.getElementById("kode_toko").value = potentialCode;
-        }
-
       // --- PENTING: Tunggu fetchKontraktor selesai dulu ---
       await fetchKontraktor(selectedRab.Cabang);
 

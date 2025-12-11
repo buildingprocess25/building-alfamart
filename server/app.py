@@ -705,7 +705,7 @@ def submit_spk():
 
         cabang = data.get('Cabang')
         nama_toko = data.get('Nama_Toko', data.get('nama_toko', 'N/A'))
-        kode_toko = data.get('Nomor Ulok', 'N/A')
+        kode_toko = data.get('Kode Toko', 'N/A')
         jenis_toko = data.get('Jenis_Toko', data.get('Proyek', 'N/A'))
         lingkup_pekerjaan = data.get('Lingkup Pekerjaan', data.get('Lingkup_Pekerjaan', data.get('lingkup_pekerjaan', 'N/A')))
 
@@ -890,7 +890,7 @@ def handle_spk_approval():
             nama_toko = row_data.get('Nama_Toko', row_data.get('nama_toko', 'N/A'))
             lingkup_pekerjaan = row_data.get('Lingkup Pekerjaan', row_data.get('Lingkup_Pekerjaan', row_data.get('lingkup_pekerjaan', 'N/A')))
 
-            kode_toko = row_data.get('Nomor Ulok', 'N/A')
+            kode_toko = row_data.get('Kode Toko', 'N/A')
             subject = f"[DISETUJUI] SPK Proyek {nama_toko} ({kode_toko}): {jenis_toko} - {lingkup_pekerjaan}"
             
             email_attachments = [(final_pdf_filename, final_pdf_bytes, 'application/pdf')]
@@ -948,7 +948,7 @@ def handle_spk_approval():
             lingkup_pekerjaan = row_data.get('Lingkup Pekerjaan', row_data.get('Lingkup_Pekerjaan', row_data.get('lingkup_pekerjaan', 'N/A')))
 
             if initiator_email:
-                kode_toko = row_data.get('Nomor Ulok', 'N/A')
+                kode_toko = row_data.get('Kode Toko', 'N/A')
                 subject = f"[DITOLAK] SPK untuk Proyek {nama_toko} ({kode_toko}): {jenis_toko} - {lingkup_pekerjaan}"
                 body = (f"<p>SPK yang Anda ajukan untuk Toko <b>{nama_toko}</b> pada proyek <b>{jenis_toko} - {lingkup_pekerjaan}</b> ({row_data.get('Nomor Ulok')}) telah ditolak oleh Branch Manager.</p>"
                         f"<p><b>Alasan Penolakan:</b></p>"

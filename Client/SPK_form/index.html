@@ -13,7 +13,7 @@
         if (!isAuthenticated) {
             // Jika belum login, simpan tujuan & alihkan ke halaman login
             sessionStorage.setItem('redirectTo', window.location.pathname);
-            window.location.href = '/login.html';
+            window.location.href = '/login_spk.html';
         } else if (!allowedRoles.includes(userRole)) {
             // Jika sudah login tapi jabatan salah, beri peringatan & alihkan ke homepage
             alert('Anda tidak memiliki izin untuk mengakses halaman ini.');

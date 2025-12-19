@@ -77,7 +77,9 @@ document.addEventListener('DOMContentLoaded', () => {
     MADIUN: "2MZ1",
   };
 
-  const PYTHON_API_BASE_URL = "https://building-alfamart.onrender.com";
+  // const PYTHON_API_BASE_URL = "https://building-alfamart.onrender.com";
+  const PYTHON_API_BASE_URL = "https://sparta-backend.web.id"
+
   let approvedRabData = [];
 
   const branchGroups = {

@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.querySelector('form');
     // const PYTHON_API_BASE_URL = "https://building-alfamart.onrender.com";
-    const PYTHON_API_BASE_URL = "https://sparta-backend.web.id"; 
+    const PYTHON_API_BASE_URL = "https://sparta-backend-5hdj.onrender.com"; 
 
     // --- Fungsi Bantuan ---
     const toBase64 = file => new Promise((resolve, reject) => {

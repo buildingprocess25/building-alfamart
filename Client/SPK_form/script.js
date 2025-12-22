@@ -78,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // const PYTHON_API_BASE_URL = "https://building-alfamart.onrender.com";
-  const PYTHON_API_BASE_URL = "https://sparta-backend.web.id"
+  const PYTHON_API_BASE_URL = "https://sparta-backend-5hdj.onrender.com"
 
   let approvedRabData = [];
 
